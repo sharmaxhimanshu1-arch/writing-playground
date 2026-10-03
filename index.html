@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Writing Playground</title>
+  <meta name="description" content="A practice space for new writers: frameworks, prompts and live feedback for comedy, video scripts, stories, essays, poetry and copy.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,600&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<!--APP-START-->
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8 4 20z"/><path d="M14 6.6l3.4 3.4"/></svg>
+      <span class="brand-name">Writing Playground</span>
+    </div>
+    <nav class="genre-tabs" id="genreTabs" aria-label="What are you writing?"></nav>
+    <div class="top-actions">
+      <button class="icon-btn" id="toggleLeft" type="button" aria-controls="leftPanel" aria-expanded="true" title="Ideas &amp; drafts">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15"/></svg>
+        <span class="btn-label">Ideas</span>
+      </button>
+      <button class="icon-btn" id="toggleRight" type="button" aria-controls="rightPanel" aria-expanded="true" title="Toolkit">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M15 4.5v15"/></svg>
+        <span class="btn-label">Toolkit</span>
+      </button>
+      <button class="icon-btn" id="focusBtn" type="button" aria-pressed="false" title="Focus mode (hide panels)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>
+        <span class="btn-label">Focus</span>
+      </button>
+      <button class="icon-btn" id="themeBtn" type="button" title="Switch light / dark">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" class="fill"/></svg>
+        <span class="sr-only">Switch theme</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout" id="layout">
+    <aside class="panel panel-left" id="leftPanel" aria-label="Ideas and drafts">
+      <div class="panel-tabs" role="tablist">
+        <button role="tab" type="button" data-tab="ideas" id="tab-ideas" aria-selected="true">Ideas</button>
+        <button role="tab" type="button" data-tab="drafts" id="tab-drafts" aria-selected="false">Drafts</button>
+      </div>
+      <div class="panel-body" id="pane-ideas" role="tabpanel" aria-labelledby="tab-ideas"></div>
+      <div class="panel-body" id="pane-drafts" role="tabpanel" aria-labelledby="tab-drafts" hidden></div>
+    </aside>
+
+    <main class="desk" id="desk">
+      <div class="sheet" id="sheet">
+        <div class="sheet-head">
+          <input id="docTitle" class="doc-title" type="text" placeholder="Untitled draft" aria-label="Draft title" autocomplete="off">
+          <div class="sheet-meta">
+            <select class="chip chip-select" id="genreChip" aria-label="Check this draft as"></select>
+            <button class="chip chip-btn" id="frameworkChip" type="button"></button>
+            <button class="chip chip-btn" id="widthBtn" type="button" aria-pressed="false">Wide page</button>
+          </div>
+        </div>
+        <div class="editor-wrap" id="editorWrap">
+          <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+          <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start anywhere. Stuck? Take a prompt from the Ideas panel, or insert a framework outline from the Toolkit."></textarea>
+        </div>
+        <p class="sheet-foot">Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
+      </div>
+    </main>
+
+    <aside class="panel panel-right" id="rightPanel" aria-label="Writing toolkit">
+      <div class="panel-tabs" role="tablist">
+        <button role="tab" type="button" data-tab="checks" id="tab-checks" aria-selected="true">Checks <span class="tab-score" id="tabScore"></span></button>
+        <button role="tab" type="button" data-tab="frameworks" id="tab-frameworks" aria-selected="false">Frameworks</button>
+        <button role="tab" type="button" data-tab="learn" id="tab-learn" aria-selected="false">Learn</button>
+      </div>
+      <div class="panel-body" id="pane-checks" role="tabpanel" aria-labelledby="tab-checks"></div>
+      <div class="panel-body" id="pane-frameworks" role="tabpanel" aria-labelledby="tab-frameworks" hidden></div>
+      <div class="panel-body" id="pane-learn" role="tabpanel" aria-labelledby="tab-learn" hidden></div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+  </div>
+
+  <footer class="statusbar" id="statusbar">
+    <span class="stat" id="statWords"></span>
+    <span class="stat" id="statTime"></span>
+    <span class="stat" id="statGrade"></span>
+    <span class="stat stat-goal" id="statGoal" hidden><span class="goal-track"><span class="goal-fill" id="goalFill"></span></span><span id="goalText"></span></span>
+    <span class="stat stat-sprint" id="statSprint" hidden></span>
+    <span class="cursor-note" id="cursorNote" aria-live="polite"></span>
+    <span class="stat save-state" id="saveState"></span>
+  </footer>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+<!--APP-END-->
+<!--SCRIPTS-START-->
+<script src="js/core/text.js"></script>
+<script src="js/core/lexicon.js"></script>
+<script src="js/core/checks.js"></script>
+<script src="js/genres/comedy.js"></script>
+<script src="js/genres/video.js"></script>
+<script src="js/genres/story.js"></script>
+<script src="js/genres/essay.js"></script>
+<script src="js/genres/poetry.js"></script>
+<script src="js/genres/copy.js"></script>
+<script src="js/ui/editor.js"></script>
+<script src="js/app.js"></script>
+<!--SCRIPTS-END-->
+</body>
+</html>

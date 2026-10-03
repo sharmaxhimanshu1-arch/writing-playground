@@ -1,0 +1,12 @@
+{
+  "name": "writing-playground",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A practice space for new writers: frameworks, prompts and live rule-based feedback.",
+  "scripts": {
+    "test": "node tests/run-checks.js",
+    "build": "node scripts/build.js",
+    "start": "python3 -m http.server 8080"
+  },
+  "license": "MIT"
+}
