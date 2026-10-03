@@ -50,6 +50,8 @@
     wide: false,
     theme: null,
     goal: 0,
+    days: {},
+    drillsDone: [],
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
 
@@ -67,7 +69,13 @@
     nudge: null,
     sprint: null,
     confirmDelete: null,
+    allMarks: [],
+    lastCount: null,
+    fixMark: null,
+    showModel: false,
+    speaking: false,
   };
+  let downloads = null;
 
   const genreById = (id) => WP.genres.find((g) => g.id === id) || WP.genres[0];
   const doc = () => state.docs.find((d) => d.id === state.currentId);
@@ -127,6 +135,7 @@
       d.text = text;
       d.updated = Date.now();
       persist();
+      hideFixCard();
       scheduleAnalysis();
       renderStatusLight();
     },
@@ -147,6 +156,7 @@
           <span>${esc(m.note)}</span>
         </div>`).join('');
       tip.hidden = false;
+      tip.dataset.src = 'editor';
       const w = tip.offsetWidth;
       const h = tip.offsetHeight;
       let x = info.x + 14;
@@ -173,15 +183,96 @@
     const g = genre();
     const ctx = T.parse(d.text, { framework: d.framework, genre: g.id });
     ctx.frameworkDef = frameworkDef();
-    const { results, score } = WP.checks.run(g.checks, ctx);
+    const { results, score } = WP.checks.run(g.checks, ctx, { force: d.drill ? [d.drill.rule] : [] });
     state.ctx = ctx;
     state.results = results;
     state.score = score;
+    state.allMarks = results.flatMap((r) => r.marks);
+    state.allMarks.forEach((m, i) => (m.idx = i));
     if (state.spotlight && !results.some((r) => r.id === state.spotlight)) state.spotlight = null;
-    editor.setMarks(results.flatMap((r) => r.marks));
+    editor.setMarks(state.allMarks);
+    trackWords(d.id, ctx.wordCount);
+    checkDrill(d, results);
     renderChecks();
     renderStatus();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
+    if (prefs.leftTab === 'practice') renderPractice();
+  }
+
+  /* ---------- daily progress ---------- */
+
+  function dayKey(date) {
+    const d = date || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  let prefsTimer = null;
+  function trackWords(id, count) {
+    const last = state.lastCount;
+    if (last && last.id === id && count > last.count) {
+      const key = dayKey();
+      prefs.days[key] = (prefs.days[key] || 0) + Math.min(count - last.count, 400);
+      const cutoff = dayKey(new Date(Date.now() - 90 * 86400000));
+      for (const k of Object.keys(prefs.days)) if (k < cutoff) delete prefs.days[k];
+      clearTimeout(prefsTimer);
+      prefsTimer = setTimeout(() => {
+        savePrefs();
+        if (prefs.leftTab === 'ideas') renderProgress();
+      }, 800);
+    }
+    state.lastCount = { id, count };
+  }
+
+  function streak() {
+    let n = 0;
+    const d = new Date();
+    if (!prefs.days[dayKey(d)]) d.setDate(d.getDate() - 1);
+    while (prefs.days[dayKey(d)] > 0) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  }
+
+  function renderProgress() {
+    const el = $('progressBox');
+    if (!el) return;
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push({ date: d, words: prefs.days[dayKey(d)] || 0 });
+    }
+    const max = Math.max(50, ...days.map((x) => x.words));
+    const W = 280;
+    const H = 56;
+    const gap = 3;
+    const bw = (W - gap * 13) / 14;
+    const fmt = (d) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const bars = days.map((x, i) => {
+      const xPos = i * (bw + gap);
+      const h = x.words ? Math.max(4, (x.words / max) * (H - 4)) : 2;
+      const y = H - h;
+      const cls = x.words ? 'bar' : 'bar-empty';
+      const top = x.words && h > 4 ? `<rect class="${cls}" x="${xPos}" y="${y}" width="${bw}" height="${h}" rx="3"></rect><rect class="${cls}" x="${xPos}" y="${H - Math.min(h, 4)}" width="${bw}" height="${Math.min(h, 4)}"></rect>`
+        : `<rect class="${cls}" x="${xPos}" y="${y}" width="${bw}" height="${h}"></rect>`;
+      return `<g>${top}<rect class="bar-hit" x="${xPos - gap / 2}" y="0" width="${bw + gap}" height="${H}" data-tip="${esc(fmt(x.date))}: ${x.words} words"></rect></g>`;
+    }).join('');
+    const today = prefs.days[dayKey()] || 0;
+    const st = streak();
+    const total = days.reduce((a, x) => a + x.words, 0);
+    el.innerHTML = `
+      <div class="progress-stats">
+        <span><b>${today}</b> words today</span>
+        <span><b>${st}</b> day streak</span>
+        <span><b>${total}</b> in 14 days</span>
+      </div>
+      <svg class="progress-chart" viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Words written per day for the last 14 days. Today ${today} words, ${total} in total.">
+        ${bars}
+        <text class="axis-label" x="0" y="${H + 12}">${esc(days[0].date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}</text>
+        <text class="axis-label" x="${W}" y="${H + 12}" text-anchor="end">Today</text>
+      </svg>
+      <p class="small muted">${st >= 2 ? `Keep it going: write anything today to make it ${st + (today ? 0 : 1)} days.` : 'Writing a little every day beats a lot once a week. Even 50 words counts.'}</p>`;
   }
 
   /* ---------- top bar ---------- */
@@ -294,10 +385,14 @@
     document.querySelectorAll('#rightPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.rightTab)));
     $('pane-ideas').hidden = prefs.leftTab !== 'ideas';
     $('pane-drafts').hidden = prefs.leftTab !== 'drafts';
+    $('pane-practice').hidden = prefs.leftTab !== 'practice';
+    $('pane-coach').hidden = prefs.rightTab !== 'coach';
     $('pane-checks').hidden = prefs.rightTab !== 'checks';
     $('pane-frameworks').hidden = prefs.rightTab !== 'frameworks';
     $('pane-learn').hidden = prefs.rightTab !== 'learn';
     if (prefs.leftTab === 'drafts') renderDrafts();
+    if (prefs.leftTab === 'practice') renderPractice();
+    if (prefs.rightTab === 'coach') WP.coach.render();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
     if (prefs.rightTab === 'learn') renderLearn();
   }
@@ -325,6 +420,11 @@
     if (!state.idea) state.idea = buildIdea(g);
     const sprint = state.sprint;
     $('pane-ideas').innerHTML = `
+      <section class="section">
+        <p class="eyebrow">Your writing</p>
+        <div id="progressBox"></div>
+      </section>
+
       <section class="section">
         <p class="eyebrow">Prompt · ${esc(g.name)}</p>
         <div class="idea-card">
@@ -372,6 +472,87 @@
           <input id="goalInput" type="number" min="0" step="50" inputmode="numeric" value="${prefs.goal || ''}" placeholder="e.g. 300">
         </label>
       </section>`;
+    renderProgress();
+  }
+
+  /* ---------- Practice pane ---------- */
+
+  function drillsFor(g) {
+    return (WP.drills && WP.drills[g.id]) || [];
+  }
+
+  function renderPractice() {
+    const g = genre();
+    const d = doc();
+    const drills = drillsFor(g);
+    const done = new Set(prefs.drillsDone);
+    const current = d.drill && drills.find((x) => x.id === d.drill.id);
+    const result = current && state.results.find((r) => r.id === current.rule);
+    const doneCount = drills.filter((x) => done.has(x.id)).length;
+    $('pane-practice').innerHTML = `
+      ${current ? `<section class="section">
+        <p class="eyebrow">Current drill</p>
+        <div class="idea-card drill-current">
+          <h3>${esc(current.title)}</h3>
+          <p>${esc(current.task)}</p>
+          ${result ? `<p class="drill-status"><span class="badge badge-${result.status}">${STATUS_LABEL[result.status]}</span> <span class="small">${esc(result.title)}: ${esc(result.summary)}</span></p>` : ''}
+          <details class="lesson"><summary>Hint</summary><p>${esc(current.hint)}</p></details>
+          <div class="btn-row">
+            <button class="btn" type="button" data-act="toggle-model">${state.showModel ? 'Hide model answer' : 'Show a model answer'}</button>
+            ${done.has(current.id) ? '<span class="small drill-done">Done</span>' : '<button class="btn btn-primary" type="button" data-act="drill-done">Mark as done</button>'}
+          </div>
+          ${state.showModel ? `<pre class="fw-example">${esc(current.model)}</pre><p class="small muted">One possible answer. Yours can be different and still follow the rule.</p>` : ''}
+        </div>
+      </section>` : ''}
+      <section class="section">
+        <p class="eyebrow">${esc(g.name)} drills · ${doneCount} of ${drills.length} done</p>
+        <p class="small muted">Short exercises that train one rule at a time. Each one opens a flawed passage with its check turned on. Fix it until the check says “Following”, then compare with a model answer.</p>
+        <ul class="drill-list">${drills.map((x) => `<li class="drill ${current && current.id === x.id ? 'current' : ''}">
+          <button type="button" class="drill-open" data-drill="${x.id}">
+            <span class="drill-title">${done.has(x.id) ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)}</span>
+            <span class="drill-task">${esc(x.task)}</span>
+          </button>
+        </li>`).join('')}</ul>
+      </section>`;
+  }
+
+  function startDrill(id) {
+    const g = genre();
+    const drill = drillsFor(g).find((x) => x.id === id);
+    if (!drill) return;
+    let d = state.docs.find((x) => x.drill && x.drill.id === id);
+    if (!d) {
+      d = newDoc(g.id, {
+        title: `Drill: ${drill.title}`,
+        framework: drill.framework || g.frameworks[0].id,
+        text: `> Drill: ${drill.task}\n\n${drill.text}`,
+        drill: { id: drill.id, rule: drill.rule, start: drill.text },
+      });
+    }
+    state.showModel = false;
+    openDoc(d.id);
+    state.spotlight = drill.rule;
+    state.expanded.add(drill.rule);
+    applyFilters();
+    renderChecks();
+    prefs.rightTab = 'checks';
+    savePrefs();
+    renderTabs();
+    persist(true);
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left');
+      applyLayout();
+    }
+  }
+
+  function checkDrill(d, results) {
+    if (!d.drill || prefs.drillsDone.includes(d.drill.id)) return;
+    const r = results.find((x) => x.id === d.drill.rule);
+    if (r && r.status === 'pass' && !d.text.includes(d.drill.start)) {
+      prefs.drillsDone.push(d.drill.id);
+      savePrefs();
+      toast('Drill complete: the check is green. Compare with the model answer.');
+    }
   }
 
   function insertNote(text) {
@@ -469,7 +650,7 @@
           : `<button class="btn btn-quiet" type="button" data-ask-delete="${d.id}" aria-label="Delete ${esc(d.title || 'Untitled draft')}">✕</button>`}
       </li>`;
     }).join('');
-    const canDownload = !WP.ARTIFACT;
+    const canDownload = !!downloads || !WP.ARTIFACT;
     $('pane-drafts').innerHTML = `
       <section class="section">
         <div class="btn-row">
@@ -482,7 +663,7 @@
         <p class="eyebrow">This draft</p>
         <div class="btn-row">
           <button class="btn" type="button" data-act="copy">Copy text</button>
-          ${canDownload ? '<button class="btn" type="button" data-act="download">Download .txt</button>' : ''}
+          ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
       </section>`;
   }
@@ -496,6 +677,9 @@
     const d = doc();
     editor.value = d.text;
     $('docTitle').value = d.title;
+    hideFixCard();
+    stopSpeaking();
+    if (WP.coach) WP.coach.reset();
     renderAll();
     prefs.lastDoc = id;
     savePrefs();
@@ -526,12 +710,23 @@
     }
   }
 
-  function downloadText() {
+  function downloadText(ext) {
     const d = doc();
-    const blob = new Blob([d.text], { type: 'text/plain' });
+    const name = ((d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'draft') + '.' + ext;
+    const body = ext === 'md' ? `# ${d.title || 'Untitled draft'}\n\n${d.text}\n` : d.text;
+    if (downloads) {
+      downloads.save({ filename: name, data: body }).then(
+        () => toast('File saved.'),
+        (e) => {
+          if (e && e.code !== 'declined') toast('This page can’t save files here. Use Copy text instead.');
+        }
+      );
+      return;
+    }
+    const blob = new Blob([body], { type: ext === 'md' ? 'text/markdown' : 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = (d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.txt';
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -599,6 +794,7 @@
     const issues = r.marks.filter((m) => m.level !== 'info');
     const list = (issues.length ? issues : r.marks).slice().sort((a, b) => levelRank(b.level) - levelRank(a.level) || a.start - b.start);
     const text = doc().text;
+    const fixable = r.marks.filter((m) => m.fixes && m.fixes.length);
     return `<div class="check ${state.spotlight === r.id ? 'spot' : ''}">
       <button type="button" class="check-head" data-check="${r.id}" aria-expanded="${open}">
         <span class="badge badge-${r.status}">${STATUS_LABEL[r.status]}</span>
@@ -607,11 +803,15 @@
       </button>
       ${open ? `<div class="check-body">
         <p class="check-why"><b>The rule:</b> ${esc(r.why || '')}</p>
+        ${fixable.length >= 2 ? `<div class="btn-row"><button class="btn" type="button" data-fix-all="${r.id}">${esc(fixable[0].fixes[0].label)}: all ${fixable.length}</button></div>` : ''}
         ${list.length ? `<ul class="hits">${list.slice(0, 14).map((m) => `
-          <li><button type="button" class="hit hit-${m.level}" data-hit="${m.start}:${m.end}">
-            <span class="hit-text">${esc(snippet(text, m))}</span>
-            <span class="hit-note">${esc(m.note)}</span>
-          </button></li>`).join('')}</ul>
+          <li class="hit hit-${m.level}">
+            <button type="button" class="hit-main" data-hit="${m.start}:${m.end}">
+              <span class="hit-text">${esc(snippet(text, m))}</span>
+              <span class="hit-note">${esc(m.note)}</span>
+            </button>
+            ${m.fixes ? `<span class="hit-fixes">${m.fixes.map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}</span>` : ''}
+          </li>`).join('')}</ul>
           ${list.length > 14 ? `<p class="small muted">+ ${list.length - 14} more highlighted in the draft.</p>` : ''}` : ''}
       </div>` : ''}
     </div>`;
@@ -654,7 +854,8 @@
               <ol class="beats">${fw.beats.map((b, i) => {
                 const t = tracked && tracked[i];
                 const cls = t ? (t.filled ? 'done' : t.section ? 'started' : '') : '';
-                return `<li class="beat ${cls}"><span><b>${esc(b.name)}</b><span>${esc(b.hint)}</span></span></li>`;
+                const name = t && t.section ? `<button type="button" class="beat-jump" data-beat-jump="${t.section.heading.start}:${t.section.heading.end}" title="Go to this beat">${esc(b.name)}</button>` : `<b>${esc(b.name)}</b>`;
+                return `<li class="beat ${cls}"><span>${name}<span>${esc(b.hint)}</span></span></li>`;
               }).join('')}</ol>
               <div class="btn-row">
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
@@ -791,6 +992,198 @@
     $('goalText').innerHTML = words >= goal ? '<b>Goal reached</b>' : `<b>${words}</b> / ${goal}`;
   }
 
+  /* ---------- fixes ---------- */
+
+  /** Turns a fix into a concrete edit, tidying spaces and capitals around deletions. */
+  function fixEdit(text, start, end, replacement) {
+    if (replacement) {
+      const orig = text.slice(start, end);
+      const rep = /^\p{Lu}/u.test(orig) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+      return { start, end, text: rep };
+    }
+    let a = start;
+    let b = end;
+    const before = text.slice(0, a).replace(/[ \t]+$/, '');
+    const atStart = !before || /[.!?…\n"“(]$/.test(before);
+    if (text[b] === ',') b++;
+    if (text[b] === ' ') b++;
+    else if (a > 0 && text[a - 1] === ' ') a--;
+    let out = '';
+    if (atStart && /\p{Ll}/u.test(text[b] || '')) {
+      out = text[b].toUpperCase();
+      b++;
+    }
+    return { start: a, end: b, text: out };
+  }
+
+  function applyFix(m, fix) {
+    const ta = $('editor');
+    const e = fixEdit(ta.value, m.start, m.end, fix.text);
+    hideFixCard();
+    ta.focus();
+    ta.setSelectionRange(e.start, e.end);
+    editor.insert(e.text);
+    analyze();
+  }
+
+  function applyAll(marks) {
+    const ta = $('editor');
+    const text = ta.value;
+    const edits = marks.map((m) => fixEdit(text, m.start, m.end, m.fixes[0].text)).sort((x, y) => y.start - x.start);
+    let out = text;
+    let floor = Infinity;
+    let n = 0;
+    for (const e of edits) {
+      if (e.end > floor) continue;
+      out = out.slice(0, e.start) + e.text + out.slice(e.end);
+      floor = e.start;
+      n++;
+    }
+    ta.focus();
+    ta.setSelectionRange(0, text.length);
+    editor.insert(out);
+    ta.setSelectionRange(0, 0);
+    analyze();
+    toast(`Fixed ${n} ${n === 1 ? 'spot' : 'spots'}. Press Ctrl+Z (⌘Z) to undo.`);
+  }
+
+  function showFixCard() {
+    const ta = $('editor');
+    const pos = ta.selectionStart;
+    if (ta.selectionEnd !== pos) return hideFixCard();
+    const m = editor.marksAt(pos).filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
+    if (!m) return hideFixCard();
+    state.fixMark = m;
+    const card = $('fixCard');
+    card.innerHTML = `
+      <p class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</p>
+      <p>${esc(m.note)}</p>
+      <div class="btn-row">
+        ${m.fixes.map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
+      </div>`;
+    card.hidden = false;
+    placeFixCard();
+    $('tooltip').hidden = true;
+  }
+
+  function placeFixCard() {
+    const m = state.fixMark;
+    const card = $('fixCard');
+    if (!m || card.hidden) return;
+    const r = editor.rectAt(m.start);
+    const box = $('desk').getBoundingClientRect();
+    if (r.bottom < box.top || r.top > box.bottom) return hideFixCard();
+    const w = card.offsetWidth;
+    const h = card.offsetHeight;
+    let x = r.left;
+    let y = r.bottom + 10;
+    if (x + w > window.innerWidth - 12) x = window.innerWidth - w - 12;
+    if (y + h > window.innerHeight - 12) y = r.top - h - 10;
+    card.style.left = Math.max(12, x) + 'px';
+    card.style.top = Math.max(12, y) + 'px';
+  }
+
+  function hideFixCard() {
+    state.fixMark = null;
+    const card = $('fixCard');
+    if (card) card.hidden = true;
+  }
+
+  /* ---------- read aloud ---------- */
+
+  const canSpeak = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+
+  function stopSpeaking() {
+    if (canSpeak && state.speaking) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  }
+
+  function setSpeaking(on) {
+    state.speaking = on;
+    const b = $('listenBtn');
+    b.textContent = on ? 'Stop listening' : 'Listen';
+    b.setAttribute('aria-pressed', String(on));
+  }
+
+  function toggleListen() {
+    if (state.speaking) return stopSpeaking();
+    const ta = $('editor');
+    const raw = ta.selectionEnd > ta.selectionStart ? ta.value.slice(ta.selectionStart, ta.selectionEnd) : ta.value;
+    const spoken = T.parse(raw).masked.replace(/\n\s*\n/g, '. ').replace(/\s+/g, ' ').replace(/(\.\s*){2,}/g, '. ').trim();
+    if (!/[\p{L}]/u.test(spoken)) return toast('Nothing to read yet. Notes, headings and [cues] are skipped.');
+    const u = new SpeechSynthesisUtterance(spoken);
+    u.rate = 0.98;
+    u.onend = u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    setSpeaking(true);
+    toast(ta.selectionEnd > ta.selectionStart ? 'Reading your selection aloud.' : 'Reading your draft aloud. Listen for where you stumble.');
+  }
+
+  function closeDrawers() {
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left', 'show-right');
+      applyLayout();
+    }
+  }
+
+  /* ---------- coach bridge ---------- */
+
+  function findQuote(q) {
+    const text = $('editor').value;
+    if (!q) return null;
+    const i = text.indexOf(q);
+    if (i >= 0) return { start: i, end: i + q.length };
+    const words = q.trim().split(/\s+/).map((w) => T.escapeRe(w.replace(/[“”"]/g, '')));
+    if (!words.length) return null;
+    const m = new RegExp(words.join('[\\s“”"]+'), 'i').exec(text);
+    return m ? { start: m.index, end: m.index + m[0].length } : null;
+  }
+
+  const api = {
+    doc: () => doc(),
+    genre: () => genre(),
+    frameworkDef: () => frameworkDef(),
+    results: () => state.results,
+    wordCount: () => wordCount(),
+    currentPrompt: () => state.prompt || '',
+    persist: () => persist(true),
+    toast: (m) => toast(m),
+    insertNote: (t) => insertNote(t),
+    selection() {
+      const ta = $('editor');
+      return { start: ta.selectionStart, end: ta.selectionEnd, text: ta.value.slice(ta.selectionStart, ta.selectionEnd) };
+    },
+    replaceRange(sel, text) {
+      const ta = $('editor');
+      if (ta.value.slice(sel.start, sel.end) !== sel.text) {
+        toast('That passage changed since you asked. Select it again and retry.');
+        return false;
+      }
+      closeDrawers();
+      ta.focus();
+      ta.setSelectionRange(sel.start, sel.end);
+      editor.insert(text);
+      toast('Replaced. Press Ctrl+Z (⌘Z) to undo.');
+      return true;
+    },
+    locate(q) {
+      const r = findQuote(q);
+      if (!r) return toast('Couldn’t find that passage. It may have changed.');
+      closeDrawers();
+      editor.reveal(r.start, r.end);
+    },
+    replaceQuote(q, rewrite) {
+      const r = findQuote(q);
+      if (!r) {
+        toast('Couldn’t find that passage. It may have changed.');
+        return false;
+      }
+      return api.replaceRange({ start: r.start, end: r.end, text: $('editor').value.slice(r.start, r.end) }, rewrite);
+    },
+  };
+
   /* ---------- toast ---------- */
 
   let toastTimer = null;
@@ -858,6 +1251,56 @@
     }));
 
     $('genreChip').addEventListener('change', (e) => checkAs(e.target.value));
+    $('listenBtn').hidden = !canSpeak;
+    $('listenBtn').addEventListener('click', toggleListen);
+    $('editor').addEventListener('click', showFixCard);
+    $('editor').addEventListener('keyup', (e) => {
+      if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') hideFixCard();
+    });
+    $('fixCard').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.hasAttribute('data-card-close')) return hideFixCard();
+      if (b.dataset.cardFix && state.fixMark) applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
+    });
+    document.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('#fixCard') && e.target.id !== 'editor') hideFixCard();
+    });
+    $('desk').addEventListener('scroll', placeFixCard, { passive: true });
+
+    $('pane-practice').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.drill) startDrill(b.dataset.drill);
+      else if (b.dataset.act === 'toggle-model') {
+        state.showModel = !state.showModel;
+        renderPractice();
+      } else if (b.dataset.act === 'drill-done') {
+        const d = doc();
+        if (d.drill && !prefs.drillsDone.includes(d.drill.id)) prefs.drillsDone.push(d.drill.id);
+        savePrefs();
+        renderPractice();
+        toast('Drill marked as done.');
+      }
+    });
+
+    $('pane-ideas').addEventListener('mousemove', (e) => {
+      const hit = e.target.closest && e.target.closest('.bar-hit');
+      const tip = $('tooltip');
+      if (!hit) {
+        if (tip.dataset.src === 'chart') tip.hidden = true;
+        return;
+      }
+      tip.textContent = hit.dataset.tip;
+      tip.dataset.src = 'chart';
+      tip.hidden = false;
+      const r = hit.getBoundingClientRect();
+      tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 12, Math.max(12, r.left + r.width / 2 - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = Math.max(12, r.top - tip.offsetHeight - 8) + 'px';
+    });
+    $('pane-ideas').addEventListener('mouseleave', () => {
+      if ($('tooltip').dataset.src === 'chart') $('tooltip').hidden = true;
+    });
     $('docTitle').addEventListener('input', (e) => {
       const d = doc();
       d.title = e.target.value;
@@ -926,7 +1369,7 @@
         startFreshDraft();
         $('docTitle').focus();
       } else if (t.dataset.act === 'copy') copyText();
-      else if (t.dataset.act === 'download') downloadText();
+      else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
     });
 
     $('pane-checks').addEventListener('click', (e) => {
@@ -936,6 +1379,19 @@
         savePrefs();
         applyFilters();
         renderChecks();
+        return;
+      }
+      const fixBtn = e.target.closest('[data-fix]');
+      if (fixBtn) {
+        const [mi, fi] = fixBtn.dataset.fix.split(':').map(Number);
+        const m = state.allMarks[mi];
+        if (m && m.fixes) applyFix(m, m.fixes[fi]);
+        return;
+      }
+      const fixAll = e.target.closest('[data-fix-all]');
+      if (fixAll) {
+        const r = state.results.find((x) => x.id === fixAll.dataset.fixAll);
+        if (r) applyAll(r.marks.filter((m) => m.fixes && m.fixes.length));
         return;
       }
       const hit = e.target.closest('[data-hit]');
@@ -974,7 +1430,11 @@
     $('pane-frameworks').addEventListener('click', (e) => {
       const t = e.target.closest('button');
       if (!t) return;
-      if (t.dataset.fw) {
+      if (t.dataset.beatJump) {
+        const [a, b] = t.dataset.beatJump.split(':').map(Number);
+        closeDrawers();
+        editor.reveal(a, b);
+      } else if (t.dataset.fw) {
         state.openFramework = state.openFramework === t.dataset.fw ? '' : t.dataset.fw;
         renderFrameworks();
       } else if (t.dataset.fwUse) {
@@ -989,6 +1449,8 @@
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');
+      } else if (e.key === 'Escape' && state.fixMark) {
+        hideFixCard();
       } else if (e.key === 'Escape' && state.spotlight) {
         state.spotlight = null;
         applyFilters();
@@ -1007,6 +1469,13 @@
     if (!state.docs.length) sampleDoc('comedy');
     applyTheme();
     bind();
+    WP.coach.init(api);
+    if (window.claude && typeof window.claude.use === 'function') {
+      window.claude.use('downloads').then((d) => {
+        downloads = d;
+        if (prefs.leftTab === 'drafts') renderDrafts();
+      }, () => {});
+    }
     const first = state.docs.find((d) => d.id === prefs.lastDoc) || state.docs[0];
     openDoc(first.id);
     applyLayout();

@@ -2,7 +2,7 @@
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   const WPM = 150; // typical YouTube narration pace
 
@@ -144,7 +144,7 @@
       run(ctx) {
         const andThen = T.findAll(ctx, /\band then\b/gi);
         const causal = T.findAll(ctx, /(?:^|(?<=[.!?…]\s+)|(?<=\n))(but|so|therefore|which means|that's why|that’s why|because of that|except)\b/gim);
-        const marks = andThen.map((h) => mark(h, 'warn', '“And then” just lists events. Could this be “but” (a problem) or “so” (a consequence)?'))
+        const marks = andThen.map((h) => Object.assign(mark(h, 'warn', '“And then” just lists events. Could this be “but” (a problem) or “so” (a consequence)?'), { fixes: [{ label: 'Change to “but”', text: 'but' }, { label: 'Change to “so”', text: 'so' }] }))
           .concat(causal.map((h) => mark(h, 'good', `${quote(h.text)} links cause and effect. The story drives itself.`)));
         return {
           status: andThen.length <= 1 || causal.length >= andThen.length * 2 ? 'pass' : 'warn',

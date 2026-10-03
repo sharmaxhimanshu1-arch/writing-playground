@@ -61,10 +61,11 @@
     /** Inserts text at the cursor, keeping native undo where the browser supports it. */
     insert(text, { selectInserted = false } = {}) {
       this.ta.focus();
+      if (text === '' && this.ta.selectionStart === this.ta.selectionEnd) return;
       const start = this.ta.selectionStart;
       let ok = false;
       try {
-        ok = document.execCommand('insertText', false, text);
+        ok = text === '' ? document.execCommand('delete', false) : document.execCommand('insertText', false, text);
       } catch (e) {
         ok = false;
       }
@@ -181,6 +182,15 @@
       }
       // A trailing zero-width space keeps the height of a final empty line.
       this.bd.innerHTML = out.join('\n') + '\n​';
+    }
+
+    /** Screen rectangle of a text offset, measured through the backdrop. */
+    rectAt(offset) {
+      this.render({ caret: offset });
+      const probe = this.bd.querySelector('.caret-probe');
+      const r = probe ? probe.getBoundingClientRect() : this.ta.getBoundingClientRect();
+      const line = parseFloat(getComputedStyle(this.bd).lineHeight) || 24;
+      return { left: r.left, top: r.top, bottom: r.top + line };
     }
 
     keepCaretVisible() {

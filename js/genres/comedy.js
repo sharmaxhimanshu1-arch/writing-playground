@@ -1,7 +1,7 @@
 (function (WP) {
   'use strict';
   const T = WP.text;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   /** A "bit" is a paragraph with at least two sentences or a dozen words. */
   function bits(ctx) {
@@ -31,6 +31,7 @@
       why: 'Never tell the audience something is funny. “lol”, “haha” or “get it?” explain the joke, and an explained joke is dead. Let the punchline do the work.',
       re: /(?<![\p{L}])(lol|lmao|rofl|ha(?:ha)+|hehe+|jk|just kidding|get it\?|see what i did there|that's the joke|funny,? right\?|😂|🤣)(?![\p{L}])/giu,
       level: 'bad',
+      fixes: [DELETE],
       note: (h) => `${quote(h.text)} explains the joke. Cut it and trust the punchline.`,
       grade: (n) => ({ status: n ? 'fail' : 'pass', summary: n ? `${plural(n, 'self-laugh')} found.` : 'You let the jokes speak for themselves.' }),
     }),
@@ -51,7 +52,10 @@
           if (tail) {
             weak++;
             const start = s.start + tail.index;
-            marks.push(mark({ start: start + (tail[0].match(/^[,\s]*/)[0].length), end: s.end }, 'bad', `${quote(tail[0].replace(/^[,\s]+/, ''))} after the punch kills the laugh. End on the surprise.`));
+            const trailing = tail[0].match(/[.!?…"'”’)]*$/)[0].length;
+            const m = mark({ start: start + (tail[0].match(/^[,\s]*/)[0].length), end: s.end - trailing }, 'bad', `${quote(tail[0].replace(/^[,\s]+/, '').replace(/[.!?…"'”’)]+$/, ''))} after the punch kills the laugh. End on the surprise.`);
+            m.fixes = [DELETE];
+            marks.push(m);
             continue;
           }
           const last = s.words[s.words.length - 1];
@@ -114,7 +118,7 @@
           const items = h.groups[1].split(',').map((x) => x.trim()).filter(Boolean);
           const n = items.length + 1;
           const middleOk = items.slice(1).every((x) => x.split(/\s+/).length <= 7);
-          if (!middleOk || items[0].split(/\s+/).length > 9) continue;
+          if (!middleOk || items[0].split(/\s+/).length > 14) continue;
           if (n === 3) {
             threes++;
             const lastStart = h.start + h.text.length - h.groups[2].length;

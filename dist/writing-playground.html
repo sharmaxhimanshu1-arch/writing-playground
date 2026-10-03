@@ -840,6 +840,155 @@ code, kbd {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* ---------- Fixes ---------- */
+
+.fix-card {
+  position: fixed;
+  z-index: 45;
+  width: min(320px, calc(100vw - 32px));
+  background: var(--raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fix-card p { margin: 0; }
+
+.hit {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.hit:hover { border-color: var(--accent); }
+.hit-main {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.hit-fixes { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 8px 8px; }
+.btn-small { padding: 3px 8px; font-size: var(--text-xs); }
+
+/* ---------- Progress ---------- */
+
+.progress-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--text-sm); color: var(--muted); }
+.progress-stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.progress-chart { width: 100%; height: auto; display: block; overflow: visible; }
+.progress-chart .bar { fill: var(--accent); }
+.progress-chart .bar-empty { fill: var(--line); }
+.progress-chart .bar-hit { fill: transparent; cursor: default; }
+.progress-chart g:hover .bar { fill: var(--ink); }
+.progress-chart .axis-label { fill: var(--faint); font-size: 9px; font-family: var(--font-ui); }
+
+/* ---------- Practice ---------- */
+
+.drill-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.drill-open {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.drill-open:hover { border-color: var(--accent); }
+.drill.current .drill-open { border-color: var(--accent); }
+.drill-title { font-weight: 700; display: flex; gap: 6px; align-items: baseline; }
+.drill-task { font-size: var(--text-sm); color: var(--muted); }
+.tick { color: var(--good); font-weight: 700; }
+.drill-status { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.drill-status .badge { min-width: 0; }
+.drill-done { color: var(--good); font-weight: 700; align-self: center; }
+
+/* ---------- Coach ---------- */
+
+.coach-error { color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 8px 10px; font-size: var(--text-sm); }
+.coach-busy { display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--accent); }
+.pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+.coach-review, .coach-options { display: flex; flex-direction: column; gap: 10px; }
+.coach-card {
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-sm);
+  align-items: flex-start;
+}
+.coach-card .badge { min-width: 0; }
+.coach-rewrite {
+  font-family: var(--font-editor);
+  font-size: 1rem;
+  line-height: 1.5;
+  background: var(--good-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  align-self: stretch;
+}
+.quote-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-editor);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink);
+  text-decoration: underline dotted var(--faint);
+  text-underline-offset: 3px;
+}
+.quote-btn:hover { color: var(--accent); }
+.quote-inline { font-family: var(--font-editor); font-style: italic; }
+.good-list li::marker { color: var(--good); }
+.coach-ideas { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; font-size: var(--text-sm); }
+.coach-ideas li { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.coach-chat { display: flex; flex-direction: column; gap: 8px; }
+.coach-chat:empty { display: none; }
+.bubble { border-radius: 10px; padding: 8px 12px; font-size: var(--text-sm); white-space: pre-wrap; max-width: 92%; }
+.bubble-user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); }
+.bubble-assistant { align-self: flex-start; background: var(--raised); border: 1px solid var(--line); }
+.coach-ask { display: flex; flex-direction: column; gap: 8px; }
+.coach-ask textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 8px 10px;
+  font-size: var(--text-sm);
+}
+.beat-jump {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: left;
+  display: block;
+}
+.beat-jump:hover { text-decoration: underline; }
+.panel-tabs { overflow-x: auto; scrollbar-width: none; }
+.panel-tabs::-webkit-scrollbar { display: none; }
+.panel-tabs button { flex: none; }
+
 </style>
 </head>
 <body>
@@ -874,9 +1023,11 @@ code, kbd {
     <aside class="panel panel-left" id="leftPanel" aria-label="Ideas and drafts">
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="ideas" id="tab-ideas" aria-selected="true">Ideas</button>
+        <button role="tab" type="button" data-tab="practice" id="tab-practice" aria-selected="false">Practice</button>
         <button role="tab" type="button" data-tab="drafts" id="tab-drafts" aria-selected="false">Drafts</button>
       </div>
       <div class="panel-body" id="pane-ideas" role="tabpanel" aria-labelledby="tab-ideas"></div>
+      <div class="panel-body" id="pane-practice" role="tabpanel" aria-labelledby="tab-practice" hidden></div>
       <div class="panel-body" id="pane-drafts" role="tabpanel" aria-labelledby="tab-drafts" hidden></div>
     </aside>
 
@@ -888,13 +1039,14 @@ code, kbd {
             <select class="chip chip-select" id="genreChip" aria-label="Check this draft as"></select>
             <button class="chip chip-btn" id="frameworkChip" type="button"></button>
             <button class="chip chip-btn" id="widthBtn" type="button" aria-pressed="false">Wide page</button>
+            <button class="chip chip-btn" id="listenBtn" type="button" aria-pressed="false" hidden>Listen</button>
           </div>
         </div>
         <div class="editor-wrap" id="editorWrap">
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
           <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start anywhere. Stuck? Take a prompt from the Ideas panel, or insert a framework outline from the Toolkit."></textarea>
         </div>
-        <p class="sheet-foot">Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
+        <p class="sheet-foot">Click a highlight for a one-click fix where there is one. Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
       </div>
     </main>
 
@@ -902,10 +1054,12 @@ code, kbd {
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="checks" id="tab-checks" aria-selected="true">Checks <span class="tab-score" id="tabScore"></span></button>
         <button role="tab" type="button" data-tab="frameworks" id="tab-frameworks" aria-selected="false">Frameworks</button>
+        <button role="tab" type="button" data-tab="coach" id="tab-coach" aria-selected="false">Coach</button>
         <button role="tab" type="button" data-tab="learn" id="tab-learn" aria-selected="false">Learn</button>
       </div>
       <div class="panel-body" id="pane-checks" role="tabpanel" aria-labelledby="tab-checks"></div>
       <div class="panel-body" id="pane-frameworks" role="tabpanel" aria-labelledby="tab-frameworks" hidden></div>
+      <div class="panel-body" id="pane-coach" role="tabpanel" aria-labelledby="tab-coach" hidden></div>
       <div class="panel-body" id="pane-learn" role="tabpanel" aria-labelledby="tab-learn" hidden></div>
     </aside>
     <div class="scrim" id="scrim" hidden></div>
@@ -922,6 +1076,7 @@ code, kbd {
   </footer>
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <div class="fix-card" id="fixCard" role="dialog" aria-label="Suggested fix" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
 <script>
@@ -1286,7 +1441,9 @@ code, kbd {
       sound: ['hum', 'buzz', 'crack', 'crackle', 'creak', 'click', 'clang', 'whisper', 'whispered', 'murmur',
         'rumble', 'roar', 'hiss', 'thud', 'thump', 'bang', 'rattle', 'ring', 'ringing', 'chime', 'shriek',
         'scream', 'groan', 'squeak', 'snap', 'sizzle', 'drone', 'echo', 'echoed', 'silence', 'silent', 'loud',
-        'quiet', 'hush', 'clatter', 'jingle', 'tick', 'ticking', 'beep', 'howl', 'wail', 'purr', 'crunch'],
+        'quiet', 'hush', 'clatter', 'jingle', 'tick', 'ticking', 'beep', 'howl', 'wail', 'purr', 'crunch',
+        'hissed', 'hissing', 'clicked', 'clicking', 'buzzing', 'humming', 'hummed', 'creaked', 'creaking', 'crackled',
+        'crackling', 'thudded', 'rattled', 'rattling', 'whispering', 'rang', 'roared', 'rumbled', 'banged', 'squeaked'],
       smell: ['smell', 'smelled', 'scent', 'stink', 'stench', 'reek', 'aroma', 'perfume', 'musty', 'smoky',
         'rotten', 'fragrant', 'sour', 'acrid', 'odor', 'odour', 'whiff', 'mildew', 'bleach', 'sweat', 'garlic',
         'coffee', 'smoke', 'incense', 'rot', 'damp'],
@@ -1401,6 +1558,9 @@ code, kbd {
     return new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
   }
 
+  /** A fix replaces the mark's text. An empty `text` deletes it (the app tidies spaces). */
+  const DELETE = { label: 'Delete it', text: '' };
+
   const C = {};
 
   /** Generic “find these phrases” check. */
@@ -1418,7 +1578,12 @@ code, kbd {
         const res = o.grade(hits.length, ctx, hits) || null;
         if (!res) return null;
         const note = typeof o.note === 'function' ? o.note : () => o.note;
-        res.marks = (res.marks || []).concat(hits.map((h) => mark(h, o.level, note(h, ctx))));
+        res.marks = (res.marks || []).concat(hits.map((h) => {
+          const m = mark(h, o.level, note(h, ctx));
+          const fixes = typeof o.fixes === 'function' ? o.fixes(h, ctx) : o.fixes;
+          if (fixes && fixes.length) m.fixes = fixes;
+          return m;
+        }));
         return res;
       },
     };
@@ -1431,6 +1596,7 @@ code, kbd {
       why: 'Words like “very”, “really” and “just” pad a sentence without adding meaning. Cut them, or swap the pair for one stronger word (“very tired” → “exhausted”).',
       list: lex.filler,
       level: 'warn',
+      fixes: [DELETE],
       note: (h) => `Filler: ${quote(h.text)}. Cut it or choose a stronger word.`,
       grade(n, ctx) {
         const r = per100(n, ctx);
@@ -1666,11 +1832,12 @@ code, kbd {
   });
 
   /** Runs a genre's checks and computes an overall score. */
-  function run(checks, ctx) {
+  function run(checks, ctx, opts = {}) {
     const results = [];
+    const force = new Set(opts.force || []);
     for (const c of checks) {
       const base = { id: c.id, title: c.title, group: c.group || 'Style', why: c.why };
-      const min = c.minWords ?? 20;
+      const min = force.has(c.id) ? Math.min(1, c.minWords ?? 20) : c.minWords ?? 20;
       if (ctx.wordCount < min) {
         results.push(Object.assign(base, { status: 'na', summary: `Starts checking after ${min} words.`, marks: [] }));
         continue;
@@ -1696,7 +1863,7 @@ code, kbd {
     return { results, score };
   }
 
-  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus };
+  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus, DELETE };
   WP.genres = WP.genres || [];
 })(window.WP = window.WP || {});
 
@@ -1704,7 +1871,7 @@ code, kbd {
 (function (WP) {
   'use strict';
   const T = WP.text;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   /** A "bit" is a paragraph with at least two sentences or a dozen words. */
   function bits(ctx) {
@@ -1734,6 +1901,7 @@ code, kbd {
       why: 'Never tell the audience something is funny. “lol”, “haha” or “get it?” explain the joke, and an explained joke is dead. Let the punchline do the work.',
       re: /(?<![\p{L}])(lol|lmao|rofl|ha(?:ha)+|hehe+|jk|just kidding|get it\?|see what i did there|that's the joke|funny,? right\?|😂|🤣)(?![\p{L}])/giu,
       level: 'bad',
+      fixes: [DELETE],
       note: (h) => `${quote(h.text)} explains the joke. Cut it and trust the punchline.`,
       grade: (n) => ({ status: n ? 'fail' : 'pass', summary: n ? `${plural(n, 'self-laugh')} found.` : 'You let the jokes speak for themselves.' }),
     }),
@@ -1754,7 +1922,10 @@ code, kbd {
           if (tail) {
             weak++;
             const start = s.start + tail.index;
-            marks.push(mark({ start: start + (tail[0].match(/^[,\s]*/)[0].length), end: s.end }, 'bad', `${quote(tail[0].replace(/^[,\s]+/, ''))} after the punch kills the laugh. End on the surprise.`));
+            const trailing = tail[0].match(/[.!?…"'”’)]*$/)[0].length;
+            const m = mark({ start: start + (tail[0].match(/^[,\s]*/)[0].length), end: s.end - trailing }, 'bad', `${quote(tail[0].replace(/^[,\s]+/, '').replace(/[.!?…"'”’)]+$/, ''))} after the punch kills the laugh. End on the surprise.`);
+            m.fixes = [DELETE];
+            marks.push(m);
             continue;
           }
           const last = s.words[s.words.length - 1];
@@ -1817,7 +1988,7 @@ code, kbd {
           const items = h.groups[1].split(',').map((x) => x.trim()).filter(Boolean);
           const n = items.length + 1;
           const middleOk = items.slice(1).every((x) => x.split(/\s+/).length <= 7);
-          if (!middleOk || items[0].split(/\s+/).length > 9) continue;
+          if (!middleOk || items[0].split(/\s+/).length > 14) continue;
           if (n === 3) {
             threes++;
             const lastStart = h.start + h.text.length - h.groups[2].length;
@@ -2159,7 +2330,7 @@ Next time I'm bringing a lawyer. Just to put him in the bagging area and see wha
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   const WPM = 150; // typical YouTube narration pace
 
@@ -2301,7 +2472,7 @@ Next time I'm bringing a lawyer. Just to put him in the bagging area and see wha
       run(ctx) {
         const andThen = T.findAll(ctx, /\band then\b/gi);
         const causal = T.findAll(ctx, /(?:^|(?<=[.!?…]\s+)|(?<=\n))(but|so|therefore|which means|that's why|that’s why|because of that|except)\b/gim);
-        const marks = andThen.map((h) => mark(h, 'warn', '“And then” just lists events. Could this be “but” (a problem) or “so” (a consequence)?'))
+        const marks = andThen.map((h) => Object.assign(mark(h, 'warn', '“And then” just lists events. Could this be “but” (a problem) or “so” (a consequence)?'), { fixes: [{ label: 'Change to “but”', text: 'but' }, { label: 'Change to “so”', text: 'so' }] }))
           .concat(causal.map((h) => mark(h, 'good', `${quote(h.text)} links cause and effect. The story drives itself.`)));
         return {
           status: andThen.length <= 1 || causal.length >= andThen.length * 2 ? 'pass' : 'warn',
@@ -2658,12 +2829,13 @@ Comment your go-to cheap meal and subscribe for next week's grocery haul.`,
         const quoted = (ctx.masked.match(/“[^”]*”|"[^"\n]*"/g) || []).join('').length;
         if (!quoted) return { status: 'info', summary: 'No dialogue yet. A line or two of speech can reveal character fast.', marks: [] };
         const marks = [];
-        T.findAll(ctx, /\b(said|asked|replied|whispered|shouted|yelled|told)\s+(\w+ly)\b/gi)
+        T.findAll(ctx, /\b(said|asked|replied|whispered|shouted|yelled|told|demanded|snapped|cried|called|muttered|exclaimed)\s+(\w+ly)\b/gi)
           .filter((h) => !lex.adverbExceptions.has(h.groups[2].toLowerCase()))
-          .forEach((h) => marks.push(mark(h, 'bad', `${quote(h.text)}: the adverb tells the reader how to hear the line. Make the words do it.`)));
-        T.findAll(ctx, T.phraseRegex(lex.fancyTags)).forEach((h) => {
-          const near = ctx.masked.slice(Math.max(0, h.start - 30), h.end + 30);
-          if (/[“”"]/.test(near)) marks.push(mark(h, 'warn', `${quote(h.text)} as a tag draws attention. “Said” usually works better, or an action beat.`));
+          .forEach((h) => marks.push(Object.assign(mark(h, 'bad', `${quote(h.text)}: the adverb tells the reader how to hear the line. Make the words do it.`), { fixes: [{ label: `Keep just “${h.groups[1]}”`, text: h.groups[1] }] })));
+        const tagRe = new RegExp('[,?!…—-]\\s*[”"]\\s*(?:he|she|they|i|we|you|[A-Z][a-z]+)\\s+(' + lex.fancyTags.join('|') + ')\\b', 'gi');
+        T.findAll(ctx, tagRe).forEach((m) => {
+          const h = { start: m.end - m.groups[1].length, end: m.end, text: m.groups[1] };
+          if (!marks.some((x) => x.start <= h.start && x.end >= h.end)) marks.push(Object.assign(mark(h, 'warn', `${quote(h.text)} as a tag draws attention. “Said” usually works better, or an action beat.`), { fixes: [{ label: 'Change to “said”', text: 'said' }] }));
         });
         T.findAll(ctx, /\b(said|asked)\b/gi).forEach((h) => {
           const near = ctx.masked.slice(Math.max(0, h.start - 30), h.end + 30);
@@ -2898,7 +3070,7 @@ He had to get home before his mother's shift ended, or she would know he'd snuck
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   const CLAIM = ['should', 'must', 'need to', 'the key', 'the truth is', "here's why", 'here is why', 'this is why',
     'in this post', 'in this article', 'in this essay', "i'll show", 'i will show', "you'll learn", 'you will learn',
@@ -2993,6 +3165,7 @@ He had to get home before his mother's shift ended, or she would know he'd snuck
       why: '“Some people say” and “studies show” sound like evidence but aren’t. “I think that” weakens a claim you already own by writing it. Name the source, or state the claim plainly.',
       list: lex.weasel,
       level: 'warn',
+      fixes: (h) => (/^(i think that|i believe that|i feel that|in my opinion|needless to say|it seems that|it appears that|arguably)$/i.test(h.text.replace(/\s+/g, ' ')) ? [DELETE] : []),
       note: (h) => `${quote(h.text)}: who exactly? Name the source or state it directly.`,
       grade: (n) => ({ status: n === 0 ? 'pass' : n <= 2 ? 'warn' : 'fail', summary: n ? `${plural(n, 'hedge')}.` : 'Claims are stated with confidence.' }),
     }),
@@ -3008,7 +3181,7 @@ He had to get home before his mother's shift ended, or she would know he'd snuck
         const last = ctx.paragraphs[ctx.paragraphs.length - 1];
         const announce = T.findAll(ctx, /\b(in conclusion|to sum up|in summary|to conclude|all in all|to summarize|to wrap up)\b/gi, last);
         const take = T.findAll(ctx, T.phraseRegex(TAKEAWAY), last);
-        const marks = announce.map((h) => mark(h, 'warn', `${quote(h.text)} announces the ending. Just end.`))
+        const marks = announce.map((h) => Object.assign(mark(h, 'warn', `${quote(h.text)} announces the ending. Just end.`), { fixes: [DELETE] }))
           .concat(take.slice(0, 3).map((h) => mark(h, 'good', 'Takeaway: the reader leaves with something to do or remember.')));
         return {
           status: take.length ? (announce.length ? 'warn' : 'pass') : 'warn',
@@ -3250,8 +3423,9 @@ In conclusion, walking is good. So next time the weather is decent, leave the ca
     if (/[^aeiou]y$/.test(w0)) return WP.text.syllables(w0) > 1 ? 'EE' : 'EYE';
     if (/[^aeiou]le$/.test(w0) && w0.length > 3) return 'LE:' + w0.slice(-4);
     let w = w0;
-    const magic = w.length > 2 && /[aeiouy][^aeiouy]{1,2}e$/.test(w) && !/[aeiou]{2}[^aeiouy]+e$/.test(w);
-    if (magic) w = w.slice(0, -1);
+    const silentE = w.length > 3 && /[^aeiou]e$/.test(w);
+    const magic = w.length > 2 && /(?:^|[^aeiouy])[aeiouy][^aeiouy]{1,2}e$/.test(w);
+    if (silentE || magic) w = w.slice(0, -1);
     const m = w.match(/([aeiouy]+)([^aeiouy]*)$/);
     if (!m) return w;
     let v = m[1];
@@ -3729,6 +3903,13 @@ sunlight on the floor`,
   const MARKED_POWER = ['free', 'proven', 'instantly', 'easy', 'secret', 'guaranteed', 'exclusive', 'discover',
     'effortless', 'bonus', 'imagine', 'surprising'];
 
+  const PLAIN = {
+    utilize: 'use', utilise: 'use', leverage: 'use', leveraging: 'using', seamless: 'smooth', seamlessly: 'smoothly',
+    solutions: 'tools', robust: 'reliable', empower: 'help', empowering: 'helping', 'cutting-edge': 'new',
+    'cutting edge': 'new', innovative: 'new', 'state-of-the-art': 'modern', 'world-class': 'excellent',
+    'best-in-class': 'top-rated', revolutionary: 'new', 'next-generation': 'new',
+  };
+
   function headline(ctx) {
     return ctx.sentences[0];
   }
@@ -3831,6 +4012,10 @@ sunlight on the floor`,
       why: 'Words like “innovative”, “seamless” and “solutions” are so common that readers’ eyes slide past them. Say what the thing actually does.',
       list: lex.buzzwords,
       level: 'bad',
+      fixes: (h) => {
+        const plain = PLAIN[h.text.toLowerCase().replace(/\s+/g, ' ')];
+        return plain ? [{ label: `Change to “${plain}”`, text: plain }] : [];
+      },
       note: (h) => `${quote(h.text)} is a buzzword. What does it actually mean for the customer?`,
       grade: (n) => ({ status: n === 0 ? 'pass' : n <= 2 ? 'warn' : 'fail', summary: n ? `${plural(n, 'buzzword')}.` : 'Plain, concrete language.' }),
     }),
@@ -3845,7 +4030,7 @@ sunlight on the floor`,
         const power = T.findAll(ctx, T.phraseRegex(MARKED_POWER));
         const bangs = T.findAll(ctx, /!+/g);
         const marks = power.map((h) => mark(h, 'good', `Power word ${quote(h.text)}.`))
-          .concat(bangs.length > 2 ? bangs.map((h) => mark(h, 'warn', 'Exclamation marks feel pushy. Let the words carry the energy.')) : []);
+          .concat(bangs.length > 2 ? bangs.map((h) => Object.assign(mark(h, 'warn', 'Exclamation marks feel pushy. Let the words carry the energy.'), { fixes: [{ label: 'Change to a full stop', text: '.' }] })) : []);
         const rate = per100(power.length, ctx);
         return {
           status: bangs.length > 2 || rate > 6 ? 'warn' : 'pass',
@@ -4029,6 +4214,252 @@ Download Leafy today and get your first month free.`,
   });
 })(window.WP = window.WP || {});
 
+// ---- js/genres/drills.js
+/*
+ * Practice drills: one rule at a time. Each drill opens a short flawed passage
+ * as a new draft with its check spotlighted; the writer fixes it, then compares
+ * with a model answer.
+ *   rule: the check id the drill trains (always runs, even on short text)
+ *   framework: optional framework to apply (poetry forms)
+ */
+(function (WP) {
+  'use strict';
+
+  WP.drills = {
+    comedy: [
+      {
+        id: 'c-punch',
+        title: 'Land the punch word last',
+        rule: 'punch-last',
+        task: 'Rewrite each joke so the surprising word is the very last thing the audience hears.',
+        text: 'My doctor told me to watch my drinking. So now I drink in front of a mirror, I guess.\n\nI finally told my plants I love them. Three of them died that week, which was weird or something.',
+        hint: 'Cut everything after the surprise. If the surprise is in the middle, rebuild the sentence around it.',
+        model: 'My doctor told me to watch my drinking. So now I drink in front of a mirror.\n\nI finally told my plants I love them. Three of them died that week. Apparently love is a lot of pressure.',
+      },
+      {
+        id: 'c-setup',
+        title: 'Trim a bloated setup',
+        rule: 'setup-economy',
+        task: 'Cut this setup down to under 20 words without losing the joke.',
+        text: 'So the other day, and this was a Tuesday I think, or maybe a Wednesday, it does not really matter, I decided that I was finally going to go to the gym that I have been paying for since January, which is a long time if you think about it, and when I got there the woman at the front desk asked for my name. She said I wasn’t in the system. I’ve been donating.',
+        hint: 'A setup needs who, where and what’s wrong. Everything else is delay.',
+        model: 'I finally went to the gym I’ve paid for since January. The front desk said I wasn’t in the system. So I’ve been donating.',
+      },
+      {
+        id: 'c-three',
+        title: 'Break the pattern on three',
+        rule: 'rule-of-three',
+        task: 'Cut the list to exactly three items, and make the third one break the pattern in a surprising way.',
+        text: 'To get ready for my job interview I ironed my shirt, polished my shoes, printed my résumé, and practiced my handshake. I wanted them to see the real me.',
+        hint: 'Two normal items set the pattern. The third keeps the same rhythm but comes from the wrong category.',
+        model: 'To get ready for my job interview I ironed my shirt, polished my shoes, and Googled “how to have a personality.” I wanted them to see the real me.',
+      },
+      {
+        id: 'c-specific',
+        title: 'Make it specific',
+        rule: 'specificity',
+        task: 'Replace every vague word with a name, a brand, a number or a precise detail.',
+        text: 'I went to a store late at night and bought some stuff, and a guy at the counter looked at me like I was a weird person. It was a whole thing.',
+        hint: 'What store? What time? What exactly did you buy? Specific is funny.',
+        model: 'I went to a 7-Eleven at 2 a.m. and bought a Slurpee and one single tomato, and the cashier looked at me like I’d just confessed to a crime.',
+      },
+    ],
+    video: [
+      {
+        id: 'v-hook',
+        title: 'Replace the greeting with a hook',
+        rule: 'hook',
+        task: 'Rewrite the opening so the first sentence makes the viewer need to keep watching. No greeting.',
+        text: 'Hey everyone, welcome back to my channel! Today I am going to talk about how to wake up earlier in the morning.',
+        hint: 'Try a bold claim, a question, a number, or a promise about the viewer.',
+        model: 'You’re not lazy. Your alarm is in the wrong place. Here’s the 10-second fix that got me up at 6 a.m. every day this month.',
+      },
+      {
+        id: 'v-speak',
+        title: 'Make it speakable',
+        rule: 'long-sentences',
+        task: 'Split this into short sentences you could say out loud without running out of breath.',
+        text: 'The reason most people fail when they try to learn guitar is that they start with songs that are far too hard for their current skill level and they get frustrated within the first two weeks and then they put the guitar in the closet where it stays for the next ten years collecting dust.',
+        hint: 'One idea per sentence. Read it aloud and break where you breathe.',
+        model: 'Most people quit guitar in two weeks. Why? They start with songs that are way too hard. They get frustrated. And the guitar goes in the closet for ten years.',
+      },
+      {
+        id: 'v-but',
+        title: 'And then → but / so',
+        rule: 'but-therefore',
+        task: 'Reconnect these beats with “but” and “so” so each one causes the next.',
+        text: 'I wanted to run a marathon. And then I signed up for one. And then I started training. And then I hurt my knee. And then I switched to swimming. And then I finished the race anyway.',
+        hint: 'Every beat should be a problem (“but”) or a consequence (“so”).',
+        model: 'I wanted to run a marathon, so I signed up and started training. But three weeks in, I hurt my knee. So I switched to swimming to stay fit. And on race day, I finished anyway.',
+      },
+      {
+        id: 'v-you',
+        title: 'Talk to the viewer',
+        rule: 'you-focus',
+        task: 'Rewrite so the viewer, not you, is the subject of most sentences.',
+        text: 'I have been using this budgeting method for two years. I love it because I save a lot of money. I check my spending every Sunday. I think it is the best method I have ever tried and I want to share it.',
+        hint: 'Swap “I do X” for “you can do X” and “here’s what you get”.',
+        model: 'You can save hundreds a month with one habit. Every Sunday, you check what you spent. That’s it. Here’s exactly how you set it up in ten minutes.',
+      },
+    ],
+    story: [
+      {
+        id: 's-show',
+        title: 'Show the emotion',
+        rule: 'telling-emotion',
+        task: 'Rewrite so the reader knows how each character feels without the emotion being named.',
+        text: 'Sarah was very angry at her brother for reading her diary. Her brother felt guilty. Their mother was tired of the fighting.',
+        hint: 'What do angry, guilty and tired people do with their hands, their voices, their eyes?',
+        model: 'Sarah snatched the diary back so hard the cover tore. Her brother studied his shoes. From the kitchen, their mother called, “Not tonight,” without turning around.',
+      },
+      {
+        id: 's-filter',
+        title: 'Remove filter words',
+        rule: 'filter-words',
+        task: 'Cut “heard”, “saw”, “felt” and similar words so the reader experiences things directly.',
+        text: 'She heard the door creak behind her. She saw a shadow move across the wall. She felt the cold air on her neck and realized someone was in the room.',
+        hint: 'Describe the thing itself: not “she heard the door creak” but “the door creaked”.',
+        model: 'Behind her, the door creaked. A shadow slid across the wall. Cold air touched the back of her neck. Someone was in the room.',
+      },
+      {
+        id: 's-senses',
+        title: 'Use three senses',
+        rule: 'senses',
+        task: 'Rewrite the description using at least three different senses.',
+        text: 'The kitchen was old. There was a table and some chairs. My grandmother was cooking dinner. It was a nice place to be.',
+        hint: 'What did it smell like? What sounds were there? What did things feel like to touch?',
+        model: 'The kitchen smelled of garlic and burnt sugar. The radio hissed between stations while my grandmother stirred, her spoon clicking against the pot. The table was sticky under my elbows, and warm from the stove.',
+      },
+      {
+        id: 's-tags',
+        title: 'Fix the dialogue tags',
+        rule: 'dialogue',
+        task: 'Replace fancy tags and adverbs with “said”, or with an action beat.',
+        text: '“Where were you?” she demanded angrily.\n“Out,” he retorted.\n“Out where?” she exclaimed loudly.\n“Just out,” he chuckled.',
+        hint: 'Let the words carry the emotion. An action beat (“She folded her arms.”) can replace a tag entirely.',
+        model: '“Where were you?” she said.\n“Out.”\n“Out where?” She folded her arms.\n“Just out.” He grinned and dropped his keys in the bowl.',
+      },
+    ],
+    essay: [
+      {
+        id: 'e-point',
+        title: 'Put the point first',
+        rule: 'thesis',
+        task: 'Rewrite this opening so the reader knows your main point in the first two sentences.',
+        text: 'Throughout history, people have always had different opinions about many things, and technology is one of those things that people talk about a lot these days in many different ways.',
+        hint: 'Write a sentence someone could disagree with. Then give one reason.',
+        model: 'Schools should ban phones during class. Students who can’t check their phones remember more of what they learn, and they talk to each other again at lunch.',
+      },
+      {
+        id: 'e-hedge',
+        title: 'Cut the hedges',
+        rule: 'weasel',
+        task: 'Remove the weasel words and hedges. Name a source or state the claim plainly.',
+        text: 'I think that maybe homework is not that useful. Some people say it causes stress, and many believe it does not really help younger students. In my opinion, schools should probably reconsider it.',
+        hint: 'You wrote it, so the reader knows it’s what you think. Own the claim.',
+        model: 'Homework does little for younger students. It adds stress to family evenings without improving test scores. Schools should drop it before age eleven.',
+      },
+      {
+        id: 'e-evidence',
+        title: 'Back it with an example',
+        rule: 'evidence',
+        task: 'Support the claim with a specific example, a number or a source.',
+        text: 'Learning a second language is good for you. It helps in many ways and makes you better at lots of things in life.',
+        hint: 'Start a sentence with “For example,” and give one concrete case.',
+        model: 'Learning a second language pays off fast. For example, after six months of Spanish, I could order, haggle and get directions in Mexico City, and I spent 30% less than on my last trip because I wasn’t stuck in tourist restaurants.',
+      },
+      {
+        id: 'e-long',
+        title: 'Break up a long sentence',
+        rule: 'long-sentences',
+        task: 'Split this into two or three clear sentences.',
+        text: 'Remote work has many benefits for employees, including the ability to avoid long commutes, which can save hours every week, as well as greater flexibility in scheduling, which allows people to take care of family responsibilities while still getting their work done on time.',
+        hint: 'One idea per sentence. Look for “which” and “as well as”: they often hide a second sentence.',
+        model: 'Remote work gives employees back their commute, often several hours a week. It also adds flexibility. People can pick up their kids at three and still finish their work on time.',
+      },
+    ],
+    poetry: [
+      {
+        id: 'p-haiku',
+        title: 'Count to 5-7-5',
+        rule: 'syllables',
+        framework: 'haiku',
+        task: 'Fix the syllable counts so the haiku is exactly 5, 7 and 5. Hover a line to see its count.',
+        text: 'the early morning rain\non the window of my small room\nI hear it fall',
+        hint: 'Swap words for shorter or longer ones: “early morning rain” (6) → “morning rain” (4).',
+        model: 'rain before sunrise\ntapping on my window glass\nthe kettle answers',
+      },
+      {
+        id: 'p-concrete',
+        title: 'Concrete, not abstract',
+        rule: 'imagery',
+        task: 'Replace every abstract word (love, pain, hope, heart) with something you could see, hear or touch.',
+        text: 'My heart is full of love and pain\nand hope and sorrow and despair\nmy soul is lost in endless time',
+        hint: 'What object holds this feeling? A cold mug, an empty chair, a voicemail you can’t delete.',
+        model: 'Your coat still hangs behind the door.\nI keep the pockets as you left them:\na ticket stub, two coins, a button.',
+      },
+      {
+        id: 'p-rhyme',
+        title: 'Fix the limerick',
+        rule: 'rhyme',
+        framework: 'limerick',
+        task: 'The last line should rhyme with lines 1 and 2 (AABBA). Rewrite it.',
+        text: 'A cook with a passion for cheese\nWould sneak it in all of her teas.\nShe’d stir in some brie,\nThen sip it with glee,\nAnd her guests would all leave very quickly.',
+        hint: 'Find a word that rhymes with “cheese” and “teas”, then build the punchline toward it.',
+        model: 'A cook with a passion for cheese\nWould sneak it in all of her teas.\nShe’d stir in some brie,\nThen sip it with glee,\nWhile her guests fled as fast as they please.',
+      },
+      {
+        id: 'p-endings',
+        title: 'Strong line endings',
+        rule: 'line-endings',
+        framework: 'free',
+        task: 'Re-break the lines so none ends on “the”, “of”, “and” or “a”.',
+        text: 'I walked down to the\nedge of the water and\nwatched the light go out of\nthe sky over a\nharbor full of boats',
+        hint: 'End each line on the word you want the reader to feel: a noun or a verb.',
+        model: 'I walked down to the edge\nof the water and watched\nthe light go out of the sky\nover a harbor full of boats',
+      },
+    ],
+    copy: [
+      {
+        id: 'k-headline',
+        title: 'Write a real headline',
+        rule: 'headline',
+        task: 'Rewrite the headline in under 12 words with a clear benefit, a number or a “you”.',
+        text: 'We are proud to announce the launch of our brand new rain jacket collection for the upcoming autumn season.',
+        hint: 'What does the customer get? Lead with that.',
+        model: 'Stay dry on your commute with a 9-ounce rain jacket.',
+      },
+      {
+        id: 'k-you',
+        title: 'Flip “we” to “you”',
+        rule: 'you-vs-we',
+        task: 'Rewrite so the customer is the subject of most sentences.',
+        text: 'We are a family bakery. We bake our bread fresh every morning. We use local flour and we never add preservatives. We are open until 6 p.m.',
+        hint: '“We bake fresh every morning” → “Your bread was baked this morning.”',
+        model: 'Your bread was baked this morning, with flour from a farm 20 miles away. No preservatives, ever. Pick yours up any time before 6 p.m.',
+      },
+      {
+        id: 'k-benefit',
+        title: 'Features into benefits',
+        rule: 'benefits',
+        task: 'After each feature, add what it does for the customer.',
+        text: 'The Volt blender has a 1,200-watt motor. It has six stainless steel blades. It comes with a travel cup. Buy it today.',
+        hint: 'Add “so you can…” or “which means…” after every feature.',
+        model: 'The Volt blender’s 1,200-watt motor crushes ice in 20 seconds, so you can make a smoothie before your coffee is ready. Blend straight into the travel cup, which means no extra dishes. Rinse it clean without taking it apart. Get yours today.',
+      },
+      {
+        id: 'k-buzz',
+        title: 'Cut the buzzwords',
+        rule: 'buzzwords',
+        task: 'Replace every buzzword with what the product actually does.',
+        text: 'Our innovative, cutting-edge platform leverages seamless synergy to empower your team with robust, scalable solutions.',
+        hint: 'Ask: what does a customer actually do with it on a Monday morning?',
+        model: 'Plan your team’s week in one shared calendar. Everyone sees who’s busy, and nobody has to ask in Slack.',
+      },
+    ],
+  };
+})(window.WP = window.WP || {});
+
 // ---- js/ui/editor.js
 /*
  * Highlighting editor.
@@ -4093,10 +4524,11 @@ Download Leafy today and get your first month free.`,
     /** Inserts text at the cursor, keeping native undo where the browser supports it. */
     insert(text, { selectInserted = false } = {}) {
       this.ta.focus();
+      if (text === '' && this.ta.selectionStart === this.ta.selectionEnd) return;
       const start = this.ta.selectionStart;
       let ok = false;
       try {
-        ok = document.execCommand('insertText', false, text);
+        ok = text === '' ? document.execCommand('delete', false) : document.execCommand('insertText', false, text);
       } catch (e) {
         ok = false;
       }
@@ -4215,6 +4647,15 @@ Download Leafy today and get your first month free.`,
       this.bd.innerHTML = out.join('\n') + '\n​';
     }
 
+    /** Screen rectangle of a text offset, measured through the backdrop. */
+    rectAt(offset) {
+      this.render({ caret: offset });
+      const probe = this.bd.querySelector('.caret-probe');
+      const r = probe ? probe.getBoundingClientRect() : this.ta.getBoundingClientRect();
+      const line = parseFloat(getComputedStyle(this.bd).lineHeight) || 24;
+      return { left: r.left, top: r.top, bottom: r.top + line };
+    }
+
     keepCaretVisible() {
       const probe = this.bd.querySelector('.caret-probe');
       if (!probe || !this.scroller) return;
@@ -4263,6 +4704,390 @@ Download Leafy today and get your first month free.`,
 
   WP.Editor = Editor;
   WP.esc = esc;
+})(window.WP = window.WP || {});
+
+// ---- js/ui/coach.js
+/*
+ * AI coach. Uses Claude through the artifact runtime's `sample` capability when the
+ * playground is opened as a Claude artifact. Elsewhere the tab explains that and the
+ * rest of the app keeps working offline.
+ */
+(function (WP) {
+  'use strict';
+
+  const esc = (s) => WP.esc(String(s == null ? '' : s));
+  const $ = (id) => document.getElementById(id);
+
+  const ROLE = `You are a warm, honest writing coach working with a beginner writer inside a practice app called Writing Playground.
+Coach like a good editor: specific, practical and encouraging, never vague. Use plain words a beginner understands and name the craft rule behind each point.
+Base everything on the writer's actual text. When you quote the draft, copy the words exactly. Do not invent facts about the writer.`;
+
+  const GOALS = {
+    comedy: ['Make it funnier', 'Tighten the setup', 'Sharpen the punchline', 'Add a tag line'],
+    video: ['Stronger hook', 'Make it sound spoken', 'Add an open loop', 'Shorter'],
+    story: ['Show, don’t tell', 'Add sensory detail', 'Raise the stakes', 'Sharper dialogue'],
+    essay: ['Make it clearer', 'Add an example', 'Stronger opening', 'Shorter'],
+    poetry: ['More concrete images', 'Fit the form', 'Fresher comparison', 'Stronger last line'],
+    copy: ['Focus on benefits', 'Punchier', 'Talk to “you”', 'Stronger call to action'],
+  };
+
+  const ERRORS = {
+    rate_limited: 'Too many requests right now. Wait a minute, then try again.',
+    session_expired: 'Your Claude session expired. Sign in again, then retry.',
+    refused: 'The coach could not help with that text. Try a different passage.',
+    invalid_json: 'The answer came back in the wrong shape. Try again.',
+    prompt_too_large: 'That is too much text to send at once. Select a part of the draft and use Rewrite.',
+    empty_completion: 'The coach had nothing to say about that. Try a longer passage.',
+  };
+  const OFF = new Set(['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed']);
+
+  const C = {
+    sample: null,
+    status: 'loading', // loading | ready | absent | off
+    busy: null, // 'review' | 'rewrite' | 'ideas' | 'ask'
+    ctl: null,
+    error: '',
+    rewrite: null, // { sel, goal, options }
+    ideas: null,
+    chat: [],
+    streaming: '',
+  };
+  let app = null;
+
+  function init(api) {
+    app = api;
+    render();
+    if (!window.claude || typeof window.claude.use !== 'function') {
+      C.status = 'absent';
+      render();
+      return;
+    }
+    window.claude.use('sample').then((s) => {
+      C.sample = s;
+      C.status = s ? 'ready' : 'absent';
+      render();
+    }, () => {
+      C.status = 'absent';
+      render();
+    });
+  }
+
+  function context(limit) {
+    const d = app.doc();
+    const g = app.genre();
+    const fw = app.frameworkDef();
+    const flagged = app.results()
+      .filter((r) => r.status === 'fail' || r.status === 'warn')
+      .map((r) => `- ${r.title}: ${r.summary}`)
+      .join('\n');
+    return `GENRE: ${g.name} (${g.tagline})
+FRAMEWORK: ${fw ? `${fw.name}. Beats: ${fw.beats.map((b) => b.name).join(' → ')}` : 'none chosen'}
+TITLE: ${d.title || 'Untitled'}
+RULE CHECKS THAT FLAGGED SOMETHING:
+${flagged || '- none'}
+
+DRAFT (lines starting with ## are section headings, lines starting with > are the writer's private notes, [square brackets] are cues):
+"""
+${d.text.slice(0, limit || 14000)}
+"""`;
+  }
+
+  function fail(e) {
+    const code = e && e.code;
+    if (code === 'cancelled') return;
+    if (OFF.has(code)) {
+      C.status = 'off';
+      return;
+    }
+    C.error = ERRORS[code] || 'Something went wrong reaching Claude. Try again.';
+  }
+
+  async function run(kind, fn) {
+    if (C.busy || !C.sample) return;
+    C.busy = kind;
+    C.error = '';
+    C.ctl = new AbortController();
+    render();
+    try {
+      await fn(C.ctl.signal);
+    } catch (e) {
+      fail(e);
+    } finally {
+      C.busy = null;
+      C.ctl = null;
+      C.streaming = '';
+      render();
+    }
+  }
+
+  function review() {
+    const d = app.doc();
+    if (app.wordCount() < 15) {
+      C.error = 'Write at least a few sentences first, then ask for a review.';
+      return render();
+    }
+    run('review', async (signal) => {
+      const data = await C.sample.json(`${ROLE}
+
+Review this draft. Reply with only a JSON object in this shape:
+{"summary": "two sentences: what the piece is doing and how well it works",
+ "strengths": ["specific thing that works, with a short quote", "..."],
+ "fixes": [{"quote": "exact words copied from the draft, at most 25 words", "rule": "name of the craft rule", "problem": "what is wrong, in one or two sentences", "rewrite": "a rewritten version of exactly that quote"}],
+ "next_step": "the single most useful thing to do next"}
+Give 2 or 3 strengths and up to 4 fixes, most important first. Ignore the writer's private notes when reviewing.
+
+${context()}`, { signal });
+      if (!data || typeof data !== 'object') throw { code: 'invalid_json' };
+      d.coachReview = { at: Date.now(), data };
+      app.persist();
+    });
+  }
+
+  function rewrite(goal) {
+    const sel = app.selection();
+    if (!sel.text.trim()) {
+      C.error = 'Select a sentence or paragraph in your draft first, then pick a goal.';
+      return render();
+    }
+    run('rewrite', async (signal) => {
+      const data = await C.sample.json(`${ROLE}
+
+The writer selected this passage and wants to: ${goal}.
+PASSAGE:
+"""
+${sel.text.slice(0, 4000)}
+"""
+
+Write 3 different rewrites of the passage that achieve the goal while keeping the writer's voice and meaning. Follow the rules of the genre below.
+Reply with only a JSON object: {"options": [{"text": "the rewritten passage", "why": "one short sentence naming what changed and which rule it follows"}]}
+
+For context, the whole draft:
+${context(8000)}`, { signal });
+      const options = (data && Array.isArray(data.options) ? data.options : []).filter((o) => o && o.text);
+      if (!options.length) throw { code: 'invalid_json' };
+      C.rewrite = { sel, goal, options };
+    });
+  }
+
+  function brainstorm() {
+    const g = app.genre();
+    run('ideas', async (signal) => {
+      const data = await C.sample.json(`${ROLE}
+
+The writer is stuck and needs ideas for a ${g.name} piece. Their current prompt is: "${app.currentPrompt()}".
+Suggest 5 distinct, specific ideas a beginner could start writing in the next five minutes. Each idea should give an angle and a first line to start from.
+Reply with only a JSON object: {"ideas": [{"idea": "the idea in one sentence", "first_line": "a possible opening line"}]}
+
+What they have written so far, if anything:
+${context(3000)}`, { signal, modelTier: 'default', cache: false });
+      const ideas = (data && Array.isArray(data.ideas) ? data.ideas : []).filter((x) => x && x.idea);
+      if (!ideas.length) throw { code: 'invalid_json' };
+      C.ideas = ideas;
+    });
+  }
+
+  function ask(question) {
+    const q = question.trim();
+    if (!q) return;
+    C.chat.push({ role: 'user', content: q });
+    run('ask', async (signal) => {
+      const turns = [{ role: 'user', content: `${ROLE}\nAnswer the writer's questions about their draft in a few short paragraphs. Be concrete and show examples.\n\n${context(10000)}` }]
+        .concat(C.chat.slice(-8));
+      try {
+        const { text } = await C.sample(turns, {
+          signal,
+          cache: false,
+          onText: ({ text }) => {
+            C.streaming = text;
+            const el = $('coachStream');
+            if (el) el.textContent = text;
+          },
+        });
+        C.chat.push({ role: 'assistant', content: text });
+      } catch (e) {
+        if (e && e.text) C.chat.push({ role: 'assistant', content: e.text + ' …' });
+        else C.chat.pop();
+        throw e;
+      }
+    });
+  }
+
+  /* ---------- rendering ---------- */
+
+  function busyRow(kind, label) {
+    return C.busy === kind
+      ? `<div class="coach-busy"><span class="pulse" aria-hidden="true"></span><span>${label}</span><button class="btn btn-quiet" type="button" data-coach="stop">Stop</button></div>`
+      : '';
+  }
+
+  function render() {
+    const pane = $('pane-coach');
+    if (!pane || !app) return;
+    if (C.status !== 'ready') {
+      const msg = {
+        loading: 'Connecting to Claude…',
+        absent: 'The coach uses Claude to read your draft the way an editor would: what works, what to fix, and rewrites you can drop in. It runs when you open Writing Playground as a Claude artifact. Everything else on this page works without it.',
+        off: 'The coach is turned off for this page. You can allow it from the page’s Permissions menu, then reload.',
+      }[C.status];
+      pane.innerHTML = `<section class="section"><p class="eyebrow">Writing coach</p><p class="lead">${esc(msg)}</p></section>`;
+      return;
+    }
+    const g = app.genre();
+    const d = app.doc();
+    const rev = d.coachReview && d.coachReview.data;
+    const goals = GOALS[g.id] || GOALS.essay;
+    const disabled = C.busy ? 'disabled' : '';
+
+    pane.innerHTML = `
+      <section class="section">
+        <p class="eyebrow">Writing coach</p>
+        <p class="small muted">Claude reads your draft like an editor would. Each request uses your own Claude account.</p>
+        ${C.error ? `<p class="coach-error" role="alert">${esc(C.error)}</p>` : ''}
+      </section>
+
+      <section class="section">
+        <h3>Review my draft</h3>
+        <p class="small muted">What works, what to fix first, and a rewrite for each fix.</p>
+        <div class="btn-row"><button class="btn btn-primary" type="button" data-coach="review" ${disabled}>${rev ? 'Review again' : 'Review my draft'}</button></div>
+        ${busyRow('review', 'Reading your draft…')}
+        ${rev ? renderReview(rev, d.coachReview.at) : ''}
+      </section>
+
+      <section class="section">
+        <h3>Rewrite a passage</h3>
+        <p class="small muted">Select text in your draft, then pick what you want from it.</p>
+        <div class="btn-row">${goals.map((x) => `<button class="btn" type="button" data-coach-goal="${esc(x)}" ${disabled}>${esc(x)}</button>`).join('')}</div>
+        ${busyRow('rewrite', 'Writing three versions…')}
+        ${C.rewrite ? `<div class="coach-options">
+          <p class="small muted">“${esc(C.rewrite.goal)}” for: <span class="quote-inline">${esc(trim(C.rewrite.sel.text, 90))}</span></p>
+          ${C.rewrite.options.map((o, i) => `<div class="coach-card">
+            <p class="coach-rewrite">${esc(o.text)}</p>
+            ${o.why ? `<p class="small muted">${esc(o.why)}</p>` : ''}
+            <div class="btn-row"><button class="btn btn-primary" type="button" data-coach-use="${i}">Replace selection</button></div>
+          </div>`).join('')}
+        </div>` : ''}
+      </section>
+
+      <section class="section">
+        <h3>Brainstorm</h3>
+        <p class="small muted">Five ideas with an opening line each, based on your current prompt.</p>
+        <div class="btn-row"><button class="btn" type="button" data-coach="ideas" ${disabled}>Give me 5 ideas</button></div>
+        ${busyRow('ideas', 'Thinking up ideas…')}
+        ${C.ideas ? `<ol class="coach-ideas">${C.ideas.map((x, i) => `<li>
+          <p>${esc(x.idea)}</p>
+          ${x.first_line ? `<p class="coach-rewrite">${esc(x.first_line)}</p>` : ''}
+          <button class="btn btn-quiet" type="button" data-coach-idea="${i}">Add to draft as a note</button>
+        </li>`).join('')}</ol>` : ''}
+      </section>
+
+      <section class="section">
+        <h3>Ask the coach</h3>
+        <div class="coach-chat">
+          ${C.chat.map((t) => `<div class="bubble bubble-${t.role}">${esc(t.content)}</div>`).join('')}
+          ${C.busy === 'ask' ? `<div class="bubble bubble-assistant" id="coachStream">${esc(C.streaming || 'Thinking…')}</div>` : ''}
+        </div>
+        ${busyRow('ask', 'Answering…')}
+        <form class="coach-ask" id="coachAskForm">
+          <label class="sr-only" for="coachAsk">Your question</label>
+          <textarea id="coachAsk" rows="2" placeholder="e.g. Is my ending strong enough? How do I make the second bit funnier?"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit" ${disabled}>Ask</button>
+            ${C.chat.length ? '<button class="btn btn-quiet" type="button" data-coach="clear-chat">Clear conversation</button>' : ''}
+          </div>
+        </form>
+      </section>`;
+  }
+
+  function trim(s, n) {
+    s = String(s).replace(/\s+/g, ' ').trim();
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+
+  function renderReview(r, at) {
+    const strengths = Array.isArray(r.strengths) ? r.strengths : [];
+    const fixes = Array.isArray(r.fixes) ? r.fixes.filter((f) => f && (f.problem || f.rewrite)) : [];
+    return `<div class="coach-review">
+      ${r.summary ? `<p class="lead">${esc(r.summary)}</p>` : ''}
+      ${strengths.length ? `<p class="eyebrow">What’s working</p><ul class="plain-list good-list">${strengths.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}
+      ${fixes.length ? `<p class="eyebrow">Fix these first</p>${fixes.map((f, i) => `<div class="coach-card">
+        ${f.rule ? `<span class="badge badge-warn">${esc(f.rule)}</span>` : ''}
+        ${f.quote ? `<button class="quote-btn" type="button" data-coach-find="${i}" title="Show in draft">“${esc(trim(f.quote, 140))}”</button>` : ''}
+        <p>${esc(f.problem || '')}</p>
+        ${f.rewrite ? `<p class="coach-rewrite">${esc(f.rewrite)}</p>
+          <div class="btn-row">${f.quote ? `<button class="btn btn-primary" type="button" data-coach-apply="${i}">Use this rewrite</button>` : ''}</div>` : ''}
+      </div>`).join('')}` : ''}
+      ${r.next_step ? `<p class="eyebrow">Next step</p><p>${esc(r.next_step)}</p>` : ''}
+      <p class="small muted">Reviewed ${new Date(at).toLocaleString()}. The coach can be wrong; trust your own ear too.</p>
+    </div>`;
+  }
+
+  /* ---------- events ---------- */
+
+  function bind() {
+    const pane = $('pane-coach');
+    pane.addEventListener('click', (e) => {
+      const t = e.target.closest('button');
+      if (!t) return;
+      const d = app.doc();
+      const rev = d.coachReview && d.coachReview.data;
+      if (t.dataset.coach === 'review') review();
+      else if (t.dataset.coach === 'ideas') brainstorm();
+      else if (t.dataset.coach === 'stop') C.ctl && C.ctl.abort();
+      else if (t.dataset.coach === 'clear-chat') {
+        C.chat = [];
+        render();
+      } else if (t.dataset.coachGoal) rewrite(t.dataset.coachGoal);
+      else if (t.dataset.coachUse) {
+        const o = C.rewrite.options[Number(t.dataset.coachUse)];
+        if (app.replaceRange(C.rewrite.sel, o.text)) {
+          C.rewrite = null;
+          render();
+        }
+      } else if (t.dataset.coachIdea) {
+        const x = C.ideas[Number(t.dataset.coachIdea)];
+        app.insertNote(`Idea: ${x.idea}${x.first_line ? ` First line: ${x.first_line}` : ''}`);
+        app.toast('Idea added to your draft as a note.');
+      } else if (t.dataset.coachFind && rev) app.locate(rev.fixes[Number(t.dataset.coachFind)].quote);
+      else if (t.dataset.coachApply && rev) {
+        const f = rev.fixes[Number(t.dataset.coachApply)];
+        if (app.replaceQuote(f.quote, f.rewrite)) {
+          f.applied = true;
+          rev.fixes = rev.fixes.filter((x) => x !== f);
+          app.persist();
+          render();
+        }
+      }
+    });
+    pane.addEventListener('submit', (e) => {
+      if (e.target.id !== 'coachAskForm') return;
+      e.preventDefault();
+      const box = $('coachAsk');
+      const q = box.value;
+      box.value = '';
+      ask(q);
+    });
+    pane.addEventListener('keydown', (e) => {
+      if (e.target.id === 'coachAsk' && e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        $('coachAskForm').requestSubmit();
+      }
+    });
+  }
+
+  WP.coach = {
+    init(api) {
+      bind();
+      init(api);
+    },
+    render,
+    reset() {
+      C.rewrite = null;
+      C.ideas = null;
+      C.chat = [];
+      C.error = '';
+      render();
+    },
+  };
 })(window.WP = window.WP || {});
 
 // ---- js/app.js
@@ -4318,6 +5143,8 @@ Download Leafy today and get your first month free.`,
     wide: false,
     theme: null,
     goal: 0,
+    days: {},
+    drillsDone: [],
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
 
@@ -4335,7 +5162,13 @@ Download Leafy today and get your first month free.`,
     nudge: null,
     sprint: null,
     confirmDelete: null,
+    allMarks: [],
+    lastCount: null,
+    fixMark: null,
+    showModel: false,
+    speaking: false,
   };
+  let downloads = null;
 
   const genreById = (id) => WP.genres.find((g) => g.id === id) || WP.genres[0];
   const doc = () => state.docs.find((d) => d.id === state.currentId);
@@ -4395,6 +5228,7 @@ Download Leafy today and get your first month free.`,
       d.text = text;
       d.updated = Date.now();
       persist();
+      hideFixCard();
       scheduleAnalysis();
       renderStatusLight();
     },
@@ -4415,6 +5249,7 @@ Download Leafy today and get your first month free.`,
           <span>${esc(m.note)}</span>
         </div>`).join('');
       tip.hidden = false;
+      tip.dataset.src = 'editor';
       const w = tip.offsetWidth;
       const h = tip.offsetHeight;
       let x = info.x + 14;
@@ -4441,15 +5276,96 @@ Download Leafy today and get your first month free.`,
     const g = genre();
     const ctx = T.parse(d.text, { framework: d.framework, genre: g.id });
     ctx.frameworkDef = frameworkDef();
-    const { results, score } = WP.checks.run(g.checks, ctx);
+    const { results, score } = WP.checks.run(g.checks, ctx, { force: d.drill ? [d.drill.rule] : [] });
     state.ctx = ctx;
     state.results = results;
     state.score = score;
+    state.allMarks = results.flatMap((r) => r.marks);
+    state.allMarks.forEach((m, i) => (m.idx = i));
     if (state.spotlight && !results.some((r) => r.id === state.spotlight)) state.spotlight = null;
-    editor.setMarks(results.flatMap((r) => r.marks));
+    editor.setMarks(state.allMarks);
+    trackWords(d.id, ctx.wordCount);
+    checkDrill(d, results);
     renderChecks();
     renderStatus();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
+    if (prefs.leftTab === 'practice') renderPractice();
+  }
+
+  /* ---------- daily progress ---------- */
+
+  function dayKey(date) {
+    const d = date || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  let prefsTimer = null;
+  function trackWords(id, count) {
+    const last = state.lastCount;
+    if (last && last.id === id && count > last.count) {
+      const key = dayKey();
+      prefs.days[key] = (prefs.days[key] || 0) + Math.min(count - last.count, 400);
+      const cutoff = dayKey(new Date(Date.now() - 90 * 86400000));
+      for (const k of Object.keys(prefs.days)) if (k < cutoff) delete prefs.days[k];
+      clearTimeout(prefsTimer);
+      prefsTimer = setTimeout(() => {
+        savePrefs();
+        if (prefs.leftTab === 'ideas') renderProgress();
+      }, 800);
+    }
+    state.lastCount = { id, count };
+  }
+
+  function streak() {
+    let n = 0;
+    const d = new Date();
+    if (!prefs.days[dayKey(d)]) d.setDate(d.getDate() - 1);
+    while (prefs.days[dayKey(d)] > 0) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  }
+
+  function renderProgress() {
+    const el = $('progressBox');
+    if (!el) return;
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push({ date: d, words: prefs.days[dayKey(d)] || 0 });
+    }
+    const max = Math.max(50, ...days.map((x) => x.words));
+    const W = 280;
+    const H = 56;
+    const gap = 3;
+    const bw = (W - gap * 13) / 14;
+    const fmt = (d) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const bars = days.map((x, i) => {
+      const xPos = i * (bw + gap);
+      const h = x.words ? Math.max(4, (x.words / max) * (H - 4)) : 2;
+      const y = H - h;
+      const cls = x.words ? 'bar' : 'bar-empty';
+      const top = x.words && h > 4 ? `<rect class="${cls}" x="${xPos}" y="${y}" width="${bw}" height="${h}" rx="3"></rect><rect class="${cls}" x="${xPos}" y="${H - Math.min(h, 4)}" width="${bw}" height="${Math.min(h, 4)}"></rect>`
+        : `<rect class="${cls}" x="${xPos}" y="${y}" width="${bw}" height="${h}"></rect>`;
+      return `<g>${top}<rect class="bar-hit" x="${xPos - gap / 2}" y="0" width="${bw + gap}" height="${H}" data-tip="${esc(fmt(x.date))}: ${x.words} words"></rect></g>`;
+    }).join('');
+    const today = prefs.days[dayKey()] || 0;
+    const st = streak();
+    const total = days.reduce((a, x) => a + x.words, 0);
+    el.innerHTML = `
+      <div class="progress-stats">
+        <span><b>${today}</b> words today</span>
+        <span><b>${st}</b> day streak</span>
+        <span><b>${total}</b> in 14 days</span>
+      </div>
+      <svg class="progress-chart" viewBox="0 0 ${W} ${H + 14}" role="img" aria-label="Words written per day for the last 14 days. Today ${today} words, ${total} in total.">
+        ${bars}
+        <text class="axis-label" x="0" y="${H + 12}">${esc(days[0].date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}</text>
+        <text class="axis-label" x="${W}" y="${H + 12}" text-anchor="end">Today</text>
+      </svg>
+      <p class="small muted">${st >= 2 ? `Keep it going: write anything today to make it ${st + (today ? 0 : 1)} days.` : 'Writing a little every day beats a lot once a week. Even 50 words counts.'}</p>`;
   }
 
   /* ---------- top bar ---------- */
@@ -4562,10 +5478,14 @@ Download Leafy today and get your first month free.`,
     document.querySelectorAll('#rightPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.rightTab)));
     $('pane-ideas').hidden = prefs.leftTab !== 'ideas';
     $('pane-drafts').hidden = prefs.leftTab !== 'drafts';
+    $('pane-practice').hidden = prefs.leftTab !== 'practice';
+    $('pane-coach').hidden = prefs.rightTab !== 'coach';
     $('pane-checks').hidden = prefs.rightTab !== 'checks';
     $('pane-frameworks').hidden = prefs.rightTab !== 'frameworks';
     $('pane-learn').hidden = prefs.rightTab !== 'learn';
     if (prefs.leftTab === 'drafts') renderDrafts();
+    if (prefs.leftTab === 'practice') renderPractice();
+    if (prefs.rightTab === 'coach') WP.coach.render();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
     if (prefs.rightTab === 'learn') renderLearn();
   }
@@ -4593,6 +5513,11 @@ Download Leafy today and get your first month free.`,
     if (!state.idea) state.idea = buildIdea(g);
     const sprint = state.sprint;
     $('pane-ideas').innerHTML = `
+      <section class="section">
+        <p class="eyebrow">Your writing</p>
+        <div id="progressBox"></div>
+      </section>
+
       <section class="section">
         <p class="eyebrow">Prompt · ${esc(g.name)}</p>
         <div class="idea-card">
@@ -4640,6 +5565,87 @@ Download Leafy today and get your first month free.`,
           <input id="goalInput" type="number" min="0" step="50" inputmode="numeric" value="${prefs.goal || ''}" placeholder="e.g. 300">
         </label>
       </section>`;
+    renderProgress();
+  }
+
+  /* ---------- Practice pane ---------- */
+
+  function drillsFor(g) {
+    return (WP.drills && WP.drills[g.id]) || [];
+  }
+
+  function renderPractice() {
+    const g = genre();
+    const d = doc();
+    const drills = drillsFor(g);
+    const done = new Set(prefs.drillsDone);
+    const current = d.drill && drills.find((x) => x.id === d.drill.id);
+    const result = current && state.results.find((r) => r.id === current.rule);
+    const doneCount = drills.filter((x) => done.has(x.id)).length;
+    $('pane-practice').innerHTML = `
+      ${current ? `<section class="section">
+        <p class="eyebrow">Current drill</p>
+        <div class="idea-card drill-current">
+          <h3>${esc(current.title)}</h3>
+          <p>${esc(current.task)}</p>
+          ${result ? `<p class="drill-status"><span class="badge badge-${result.status}">${STATUS_LABEL[result.status]}</span> <span class="small">${esc(result.title)}: ${esc(result.summary)}</span></p>` : ''}
+          <details class="lesson"><summary>Hint</summary><p>${esc(current.hint)}</p></details>
+          <div class="btn-row">
+            <button class="btn" type="button" data-act="toggle-model">${state.showModel ? 'Hide model answer' : 'Show a model answer'}</button>
+            ${done.has(current.id) ? '<span class="small drill-done">Done</span>' : '<button class="btn btn-primary" type="button" data-act="drill-done">Mark as done</button>'}
+          </div>
+          ${state.showModel ? `<pre class="fw-example">${esc(current.model)}</pre><p class="small muted">One possible answer. Yours can be different and still follow the rule.</p>` : ''}
+        </div>
+      </section>` : ''}
+      <section class="section">
+        <p class="eyebrow">${esc(g.name)} drills · ${doneCount} of ${drills.length} done</p>
+        <p class="small muted">Short exercises that train one rule at a time. Each one opens a flawed passage with its check turned on. Fix it until the check says “Following”, then compare with a model answer.</p>
+        <ul class="drill-list">${drills.map((x) => `<li class="drill ${current && current.id === x.id ? 'current' : ''}">
+          <button type="button" class="drill-open" data-drill="${x.id}">
+            <span class="drill-title">${done.has(x.id) ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)}</span>
+            <span class="drill-task">${esc(x.task)}</span>
+          </button>
+        </li>`).join('')}</ul>
+      </section>`;
+  }
+
+  function startDrill(id) {
+    const g = genre();
+    const drill = drillsFor(g).find((x) => x.id === id);
+    if (!drill) return;
+    let d = state.docs.find((x) => x.drill && x.drill.id === id);
+    if (!d) {
+      d = newDoc(g.id, {
+        title: `Drill: ${drill.title}`,
+        framework: drill.framework || g.frameworks[0].id,
+        text: `> Drill: ${drill.task}\n\n${drill.text}`,
+        drill: { id: drill.id, rule: drill.rule, start: drill.text },
+      });
+    }
+    state.showModel = false;
+    openDoc(d.id);
+    state.spotlight = drill.rule;
+    state.expanded.add(drill.rule);
+    applyFilters();
+    renderChecks();
+    prefs.rightTab = 'checks';
+    savePrefs();
+    renderTabs();
+    persist(true);
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left');
+      applyLayout();
+    }
+  }
+
+  function checkDrill(d, results) {
+    if (!d.drill || prefs.drillsDone.includes(d.drill.id)) return;
+    const r = results.find((x) => x.id === d.drill.rule);
+    if (r && r.status === 'pass' && !d.text.includes(d.drill.start)) {
+      prefs.drillsDone.push(d.drill.id);
+      savePrefs();
+      toast('Drill complete: the check is green. Compare with the model answer.');
+    }
   }
 
   function insertNote(text) {
@@ -4737,7 +5743,7 @@ Download Leafy today and get your first month free.`,
           : `<button class="btn btn-quiet" type="button" data-ask-delete="${d.id}" aria-label="Delete ${esc(d.title || 'Untitled draft')}">✕</button>`}
       </li>`;
     }).join('');
-    const canDownload = !WP.ARTIFACT;
+    const canDownload = !!downloads || !WP.ARTIFACT;
     $('pane-drafts').innerHTML = `
       <section class="section">
         <div class="btn-row">
@@ -4750,7 +5756,7 @@ Download Leafy today and get your first month free.`,
         <p class="eyebrow">This draft</p>
         <div class="btn-row">
           <button class="btn" type="button" data-act="copy">Copy text</button>
-          ${canDownload ? '<button class="btn" type="button" data-act="download">Download .txt</button>' : ''}
+          ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
       </section>`;
   }
@@ -4764,6 +5770,9 @@ Download Leafy today and get your first month free.`,
     const d = doc();
     editor.value = d.text;
     $('docTitle').value = d.title;
+    hideFixCard();
+    stopSpeaking();
+    if (WP.coach) WP.coach.reset();
     renderAll();
     prefs.lastDoc = id;
     savePrefs();
@@ -4794,12 +5803,23 @@ Download Leafy today and get your first month free.`,
     }
   }
 
-  function downloadText() {
+  function downloadText(ext) {
     const d = doc();
-    const blob = new Blob([d.text], { type: 'text/plain' });
+    const name = ((d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'draft') + '.' + ext;
+    const body = ext === 'md' ? `# ${d.title || 'Untitled draft'}\n\n${d.text}\n` : d.text;
+    if (downloads) {
+      downloads.save({ filename: name, data: body }).then(
+        () => toast('File saved.'),
+        (e) => {
+          if (e && e.code !== 'declined') toast('This page can’t save files here. Use Copy text instead.');
+        }
+      );
+      return;
+    }
+    const blob = new Blob([body], { type: ext === 'md' ? 'text/markdown' : 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = (d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.txt';
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -4867,6 +5887,7 @@ Download Leafy today and get your first month free.`,
     const issues = r.marks.filter((m) => m.level !== 'info');
     const list = (issues.length ? issues : r.marks).slice().sort((a, b) => levelRank(b.level) - levelRank(a.level) || a.start - b.start);
     const text = doc().text;
+    const fixable = r.marks.filter((m) => m.fixes && m.fixes.length);
     return `<div class="check ${state.spotlight === r.id ? 'spot' : ''}">
       <button type="button" class="check-head" data-check="${r.id}" aria-expanded="${open}">
         <span class="badge badge-${r.status}">${STATUS_LABEL[r.status]}</span>
@@ -4875,11 +5896,15 @@ Download Leafy today and get your first month free.`,
       </button>
       ${open ? `<div class="check-body">
         <p class="check-why"><b>The rule:</b> ${esc(r.why || '')}</p>
+        ${fixable.length >= 2 ? `<div class="btn-row"><button class="btn" type="button" data-fix-all="${r.id}">${esc(fixable[0].fixes[0].label)}: all ${fixable.length}</button></div>` : ''}
         ${list.length ? `<ul class="hits">${list.slice(0, 14).map((m) => `
-          <li><button type="button" class="hit hit-${m.level}" data-hit="${m.start}:${m.end}">
-            <span class="hit-text">${esc(snippet(text, m))}</span>
-            <span class="hit-note">${esc(m.note)}</span>
-          </button></li>`).join('')}</ul>
+          <li class="hit hit-${m.level}">
+            <button type="button" class="hit-main" data-hit="${m.start}:${m.end}">
+              <span class="hit-text">${esc(snippet(text, m))}</span>
+              <span class="hit-note">${esc(m.note)}</span>
+            </button>
+            ${m.fixes ? `<span class="hit-fixes">${m.fixes.map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}</span>` : ''}
+          </li>`).join('')}</ul>
           ${list.length > 14 ? `<p class="small muted">+ ${list.length - 14} more highlighted in the draft.</p>` : ''}` : ''}
       </div>` : ''}
     </div>`;
@@ -4922,7 +5947,8 @@ Download Leafy today and get your first month free.`,
               <ol class="beats">${fw.beats.map((b, i) => {
                 const t = tracked && tracked[i];
                 const cls = t ? (t.filled ? 'done' : t.section ? 'started' : '') : '';
-                return `<li class="beat ${cls}"><span><b>${esc(b.name)}</b><span>${esc(b.hint)}</span></span></li>`;
+                const name = t && t.section ? `<button type="button" class="beat-jump" data-beat-jump="${t.section.heading.start}:${t.section.heading.end}" title="Go to this beat">${esc(b.name)}</button>` : `<b>${esc(b.name)}</b>`;
+                return `<li class="beat ${cls}"><span>${name}<span>${esc(b.hint)}</span></span></li>`;
               }).join('')}</ol>
               <div class="btn-row">
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
@@ -5059,6 +6085,198 @@ Download Leafy today and get your first month free.`,
     $('goalText').innerHTML = words >= goal ? '<b>Goal reached</b>' : `<b>${words}</b> / ${goal}`;
   }
 
+  /* ---------- fixes ---------- */
+
+  /** Turns a fix into a concrete edit, tidying spaces and capitals around deletions. */
+  function fixEdit(text, start, end, replacement) {
+    if (replacement) {
+      const orig = text.slice(start, end);
+      const rep = /^\p{Lu}/u.test(orig) ? replacement[0].toUpperCase() + replacement.slice(1) : replacement;
+      return { start, end, text: rep };
+    }
+    let a = start;
+    let b = end;
+    const before = text.slice(0, a).replace(/[ \t]+$/, '');
+    const atStart = !before || /[.!?…\n"“(]$/.test(before);
+    if (text[b] === ',') b++;
+    if (text[b] === ' ') b++;
+    else if (a > 0 && text[a - 1] === ' ') a--;
+    let out = '';
+    if (atStart && /\p{Ll}/u.test(text[b] || '')) {
+      out = text[b].toUpperCase();
+      b++;
+    }
+    return { start: a, end: b, text: out };
+  }
+
+  function applyFix(m, fix) {
+    const ta = $('editor');
+    const e = fixEdit(ta.value, m.start, m.end, fix.text);
+    hideFixCard();
+    ta.focus();
+    ta.setSelectionRange(e.start, e.end);
+    editor.insert(e.text);
+    analyze();
+  }
+
+  function applyAll(marks) {
+    const ta = $('editor');
+    const text = ta.value;
+    const edits = marks.map((m) => fixEdit(text, m.start, m.end, m.fixes[0].text)).sort((x, y) => y.start - x.start);
+    let out = text;
+    let floor = Infinity;
+    let n = 0;
+    for (const e of edits) {
+      if (e.end > floor) continue;
+      out = out.slice(0, e.start) + e.text + out.slice(e.end);
+      floor = e.start;
+      n++;
+    }
+    ta.focus();
+    ta.setSelectionRange(0, text.length);
+    editor.insert(out);
+    ta.setSelectionRange(0, 0);
+    analyze();
+    toast(`Fixed ${n} ${n === 1 ? 'spot' : 'spots'}. Press Ctrl+Z (⌘Z) to undo.`);
+  }
+
+  function showFixCard() {
+    const ta = $('editor');
+    const pos = ta.selectionStart;
+    if (ta.selectionEnd !== pos) return hideFixCard();
+    const m = editor.marksAt(pos).filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
+    if (!m) return hideFixCard();
+    state.fixMark = m;
+    const card = $('fixCard');
+    card.innerHTML = `
+      <p class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</p>
+      <p>${esc(m.note)}</p>
+      <div class="btn-row">
+        ${m.fixes.map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
+      </div>`;
+    card.hidden = false;
+    placeFixCard();
+    $('tooltip').hidden = true;
+  }
+
+  function placeFixCard() {
+    const m = state.fixMark;
+    const card = $('fixCard');
+    if (!m || card.hidden) return;
+    const r = editor.rectAt(m.start);
+    const box = $('desk').getBoundingClientRect();
+    if (r.bottom < box.top || r.top > box.bottom) return hideFixCard();
+    const w = card.offsetWidth;
+    const h = card.offsetHeight;
+    let x = r.left;
+    let y = r.bottom + 10;
+    if (x + w > window.innerWidth - 12) x = window.innerWidth - w - 12;
+    if (y + h > window.innerHeight - 12) y = r.top - h - 10;
+    card.style.left = Math.max(12, x) + 'px';
+    card.style.top = Math.max(12, y) + 'px';
+  }
+
+  function hideFixCard() {
+    state.fixMark = null;
+    const card = $('fixCard');
+    if (card) card.hidden = true;
+  }
+
+  /* ---------- read aloud ---------- */
+
+  const canSpeak = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+
+  function stopSpeaking() {
+    if (canSpeak && state.speaking) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  }
+
+  function setSpeaking(on) {
+    state.speaking = on;
+    const b = $('listenBtn');
+    b.textContent = on ? 'Stop listening' : 'Listen';
+    b.setAttribute('aria-pressed', String(on));
+  }
+
+  function toggleListen() {
+    if (state.speaking) return stopSpeaking();
+    const ta = $('editor');
+    const raw = ta.selectionEnd > ta.selectionStart ? ta.value.slice(ta.selectionStart, ta.selectionEnd) : ta.value;
+    const spoken = T.parse(raw).masked.replace(/\n\s*\n/g, '. ').replace(/\s+/g, ' ').replace(/(\.\s*){2,}/g, '. ').trim();
+    if (!/[\p{L}]/u.test(spoken)) return toast('Nothing to read yet. Notes, headings and [cues] are skipped.');
+    const u = new SpeechSynthesisUtterance(spoken);
+    u.rate = 0.98;
+    u.onend = u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    setSpeaking(true);
+    toast(ta.selectionEnd > ta.selectionStart ? 'Reading your selection aloud.' : 'Reading your draft aloud. Listen for where you stumble.');
+  }
+
+  function closeDrawers() {
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left', 'show-right');
+      applyLayout();
+    }
+  }
+
+  /* ---------- coach bridge ---------- */
+
+  function findQuote(q) {
+    const text = $('editor').value;
+    if (!q) return null;
+    const i = text.indexOf(q);
+    if (i >= 0) return { start: i, end: i + q.length };
+    const words = q.trim().split(/\s+/).map((w) => T.escapeRe(w.replace(/[“”"]/g, '')));
+    if (!words.length) return null;
+    const m = new RegExp(words.join('[\\s“”"]+'), 'i').exec(text);
+    return m ? { start: m.index, end: m.index + m[0].length } : null;
+  }
+
+  const api = {
+    doc: () => doc(),
+    genre: () => genre(),
+    frameworkDef: () => frameworkDef(),
+    results: () => state.results,
+    wordCount: () => wordCount(),
+    currentPrompt: () => state.prompt || '',
+    persist: () => persist(true),
+    toast: (m) => toast(m),
+    insertNote: (t) => insertNote(t),
+    selection() {
+      const ta = $('editor');
+      return { start: ta.selectionStart, end: ta.selectionEnd, text: ta.value.slice(ta.selectionStart, ta.selectionEnd) };
+    },
+    replaceRange(sel, text) {
+      const ta = $('editor');
+      if (ta.value.slice(sel.start, sel.end) !== sel.text) {
+        toast('That passage changed since you asked. Select it again and retry.');
+        return false;
+      }
+      closeDrawers();
+      ta.focus();
+      ta.setSelectionRange(sel.start, sel.end);
+      editor.insert(text);
+      toast('Replaced. Press Ctrl+Z (⌘Z) to undo.');
+      return true;
+    },
+    locate(q) {
+      const r = findQuote(q);
+      if (!r) return toast('Couldn’t find that passage. It may have changed.');
+      closeDrawers();
+      editor.reveal(r.start, r.end);
+    },
+    replaceQuote(q, rewrite) {
+      const r = findQuote(q);
+      if (!r) {
+        toast('Couldn’t find that passage. It may have changed.');
+        return false;
+      }
+      return api.replaceRange({ start: r.start, end: r.end, text: $('editor').value.slice(r.start, r.end) }, rewrite);
+    },
+  };
+
   /* ---------- toast ---------- */
 
   let toastTimer = null;
@@ -5126,6 +6344,56 @@ Download Leafy today and get your first month free.`,
     }));
 
     $('genreChip').addEventListener('change', (e) => checkAs(e.target.value));
+    $('listenBtn').hidden = !canSpeak;
+    $('listenBtn').addEventListener('click', toggleListen);
+    $('editor').addEventListener('click', showFixCard);
+    $('editor').addEventListener('keyup', (e) => {
+      if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') hideFixCard();
+    });
+    $('fixCard').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.hasAttribute('data-card-close')) return hideFixCard();
+      if (b.dataset.cardFix && state.fixMark) applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
+    });
+    document.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('#fixCard') && e.target.id !== 'editor') hideFixCard();
+    });
+    $('desk').addEventListener('scroll', placeFixCard, { passive: true });
+
+    $('pane-practice').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.drill) startDrill(b.dataset.drill);
+      else if (b.dataset.act === 'toggle-model') {
+        state.showModel = !state.showModel;
+        renderPractice();
+      } else if (b.dataset.act === 'drill-done') {
+        const d = doc();
+        if (d.drill && !prefs.drillsDone.includes(d.drill.id)) prefs.drillsDone.push(d.drill.id);
+        savePrefs();
+        renderPractice();
+        toast('Drill marked as done.');
+      }
+    });
+
+    $('pane-ideas').addEventListener('mousemove', (e) => {
+      const hit = e.target.closest && e.target.closest('.bar-hit');
+      const tip = $('tooltip');
+      if (!hit) {
+        if (tip.dataset.src === 'chart') tip.hidden = true;
+        return;
+      }
+      tip.textContent = hit.dataset.tip;
+      tip.dataset.src = 'chart';
+      tip.hidden = false;
+      const r = hit.getBoundingClientRect();
+      tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 12, Math.max(12, r.left + r.width / 2 - tip.offsetWidth / 2)) + 'px';
+      tip.style.top = Math.max(12, r.top - tip.offsetHeight - 8) + 'px';
+    });
+    $('pane-ideas').addEventListener('mouseleave', () => {
+      if ($('tooltip').dataset.src === 'chart') $('tooltip').hidden = true;
+    });
     $('docTitle').addEventListener('input', (e) => {
       const d = doc();
       d.title = e.target.value;
@@ -5194,7 +6462,7 @@ Download Leafy today and get your first month free.`,
         startFreshDraft();
         $('docTitle').focus();
       } else if (t.dataset.act === 'copy') copyText();
-      else if (t.dataset.act === 'download') downloadText();
+      else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
     });
 
     $('pane-checks').addEventListener('click', (e) => {
@@ -5204,6 +6472,19 @@ Download Leafy today and get your first month free.`,
         savePrefs();
         applyFilters();
         renderChecks();
+        return;
+      }
+      const fixBtn = e.target.closest('[data-fix]');
+      if (fixBtn) {
+        const [mi, fi] = fixBtn.dataset.fix.split(':').map(Number);
+        const m = state.allMarks[mi];
+        if (m && m.fixes) applyFix(m, m.fixes[fi]);
+        return;
+      }
+      const fixAll = e.target.closest('[data-fix-all]');
+      if (fixAll) {
+        const r = state.results.find((x) => x.id === fixAll.dataset.fixAll);
+        if (r) applyAll(r.marks.filter((m) => m.fixes && m.fixes.length));
         return;
       }
       const hit = e.target.closest('[data-hit]');
@@ -5242,7 +6523,11 @@ Download Leafy today and get your first month free.`,
     $('pane-frameworks').addEventListener('click', (e) => {
       const t = e.target.closest('button');
       if (!t) return;
-      if (t.dataset.fw) {
+      if (t.dataset.beatJump) {
+        const [a, b] = t.dataset.beatJump.split(':').map(Number);
+        closeDrawers();
+        editor.reveal(a, b);
+      } else if (t.dataset.fw) {
         state.openFramework = state.openFramework === t.dataset.fw ? '' : t.dataset.fw;
         renderFrameworks();
       } else if (t.dataset.fwUse) {
@@ -5257,6 +6542,8 @@ Download Leafy today and get your first month free.`,
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');
+      } else if (e.key === 'Escape' && state.fixMark) {
+        hideFixCard();
       } else if (e.key === 'Escape' && state.spotlight) {
         state.spotlight = null;
         applyFilters();
@@ -5275,6 +6562,13 @@ Download Leafy today and get your first month free.`,
     if (!state.docs.length) sampleDoc('comedy');
     applyTheme();
     bind();
+    WP.coach.init(api);
+    if (window.claude && typeof window.claude.use === 'function') {
+      window.claude.use('downloads').then((d) => {
+        downloads = d;
+        if (prefs.leftTab === 'drafts') renderDrafts();
+      }, () => {});
+    }
     const first = state.docs.find((d) => d.id === prefs.lastDoc) || state.docs[0];
     openDoc(first.id);
     applyLayout();

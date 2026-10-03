@@ -2,7 +2,7 @@
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band } = WP.checks;
+  const { C, mark, plural, quote, band, DELETE } = WP.checks;
 
   const CLAIM = ['should', 'must', 'need to', 'the key', 'the truth is', "here's why", 'here is why', 'this is why',
     'in this post', 'in this article', 'in this essay', "i'll show", 'i will show', "you'll learn", 'you will learn',
@@ -97,6 +97,7 @@
       why: '“Some people say” and “studies show” sound like evidence but aren’t. “I think that” weakens a claim you already own by writing it. Name the source, or state the claim plainly.',
       list: lex.weasel,
       level: 'warn',
+      fixes: (h) => (/^(i think that|i believe that|i feel that|in my opinion|needless to say|it seems that|it appears that|arguably)$/i.test(h.text.replace(/\s+/g, ' ')) ? [DELETE] : []),
       note: (h) => `${quote(h.text)}: who exactly? Name the source or state it directly.`,
       grade: (n) => ({ status: n === 0 ? 'pass' : n <= 2 ? 'warn' : 'fail', summary: n ? `${plural(n, 'hedge')}.` : 'Claims are stated with confidence.' }),
     }),
@@ -112,7 +113,7 @@
         const last = ctx.paragraphs[ctx.paragraphs.length - 1];
         const announce = T.findAll(ctx, /\b(in conclusion|to sum up|in summary|to conclude|all in all|to summarize|to wrap up)\b/gi, last);
         const take = T.findAll(ctx, T.phraseRegex(TAKEAWAY), last);
-        const marks = announce.map((h) => mark(h, 'warn', `${quote(h.text)} announces the ending. Just end.`))
+        const marks = announce.map((h) => Object.assign(mark(h, 'warn', `${quote(h.text)} announces the ending. Just end.`), { fixes: [DELETE] }))
           .concat(take.slice(0, 3).map((h) => mark(h, 'good', 'Takeaway: the reader leaves with something to do or remember.')));
         return {
           status: take.length ? (announce.length ? 'warn' : 'pass') : 'warn',

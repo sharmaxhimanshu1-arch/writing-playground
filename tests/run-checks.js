@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const files = [
   'js/core/text.js', 'js/core/lexicon.js', 'js/core/checks.js',
   'js/genres/comedy.js', 'js/genres/video.js', 'js/genres/story.js',
-  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js',
+  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/drills.js',
 ];
 const sandbox = { console };
 sandbox.window = sandbox;
@@ -22,11 +22,11 @@ let failures = 0;
 const origError = console.error;
 console.error = (...a) => { failures++; origError(...a); };
 
-function analyse(genre, text, framework) {
+function analyse(genre, text, framework, force) {
   const fw = genre.frameworks.find((f) => f.id === framework) || null;
   const ctx = WP.text.parse(text, { framework, genre: genre.id });
   ctx.frameworkDef = fw;
-  const out = WP.checks.run(genre.checks, ctx);
+  const out = WP.checks.run(genre.checks, ctx, { force: force || [] });
   for (const r of out.results) {
     for (const m of r.marks) {
       if (!(m.start >= 0 && m.end <= text.length && m.end > m.start)) {
@@ -45,6 +45,23 @@ for (const g of WP.genres) {
   for (const fw of g.frameworks) {
     const r = analyse(g, fw.example, fw.id);
     console.log(`   ${fw.name}: example score ${r.score}`);
+  }
+  // Drills: the flawed passage should not pass its rule; the model answer should.
+  for (const d of WP.drills[g.id] || []) {
+    const fwId = d.framework || g.frameworks[0].id;
+    const status = (t) => {
+      const r = analyse(g, t, fwId, [d.rule]).results.find((x) => x.id === d.rule);
+      return r ? r.status : 'missing';
+    };
+    const before = status(d.text);
+    const after = status(d.model);
+    const ok = before !== 'pass' && before !== 'missing' && (after === 'pass' || after === 'info');
+    console.log(`   drill ${d.id}: ${before} -> ${after}${ok ? '' : '   <-- check this drill'}`);
+    if (before === 'missing') { failures++; origError('Drill rule missing:', d.id, d.rule); }
+  }
+  // Fixes produce strings
+  for (const r of s.results) for (const m of r.marks) for (const f of m.fixes || []) {
+    if (typeof f.text !== 'string' || !f.label) { failures++; origError('Bad fix', g.id, r.id, f); }
   }
   // Edge cases
   analyse(g, '', null);

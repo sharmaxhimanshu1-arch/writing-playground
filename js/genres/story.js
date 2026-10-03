@@ -93,12 +93,13 @@
         const quoted = (ctx.masked.match(/“[^”]*”|"[^"\n]*"/g) || []).join('').length;
         if (!quoted) return { status: 'info', summary: 'No dialogue yet. A line or two of speech can reveal character fast.', marks: [] };
         const marks = [];
-        T.findAll(ctx, /\b(said|asked|replied|whispered|shouted|yelled|told)\s+(\w+ly)\b/gi)
+        T.findAll(ctx, /\b(said|asked|replied|whispered|shouted|yelled|told|demanded|snapped|cried|called|muttered|exclaimed)\s+(\w+ly)\b/gi)
           .filter((h) => !lex.adverbExceptions.has(h.groups[2].toLowerCase()))
-          .forEach((h) => marks.push(mark(h, 'bad', `${quote(h.text)}: the adverb tells the reader how to hear the line. Make the words do it.`)));
-        T.findAll(ctx, T.phraseRegex(lex.fancyTags)).forEach((h) => {
-          const near = ctx.masked.slice(Math.max(0, h.start - 30), h.end + 30);
-          if (/[“”"]/.test(near)) marks.push(mark(h, 'warn', `${quote(h.text)} as a tag draws attention. “Said” usually works better, or an action beat.`));
+          .forEach((h) => marks.push(Object.assign(mark(h, 'bad', `${quote(h.text)}: the adverb tells the reader how to hear the line. Make the words do it.`), { fixes: [{ label: `Keep just “${h.groups[1]}”`, text: h.groups[1] }] })));
+        const tagRe = new RegExp('[,?!…—-]\\s*[”"]\\s*(?:he|she|they|i|we|you|[A-Z][a-z]+)\\s+(' + lex.fancyTags.join('|') + ')\\b', 'gi');
+        T.findAll(ctx, tagRe).forEach((m) => {
+          const h = { start: m.end - m.groups[1].length, end: m.end, text: m.groups[1] };
+          if (!marks.some((x) => x.start <= h.start && x.end >= h.end)) marks.push(Object.assign(mark(h, 'warn', `${quote(h.text)} as a tag draws attention. “Said” usually works better, or an action beat.`), { fixes: [{ label: 'Change to “said”', text: 'said' }] }));
         });
         T.findAll(ctx, /\b(said|asked)\b/gi).forEach((h) => {
           const near = ctx.masked.slice(Math.max(0, h.start - 30), h.end + 30);

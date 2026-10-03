@@ -39,8 +39,9 @@
     if (/[^aeiou]y$/.test(w0)) return WP.text.syllables(w0) > 1 ? 'EE' : 'EYE';
     if (/[^aeiou]le$/.test(w0) && w0.length > 3) return 'LE:' + w0.slice(-4);
     let w = w0;
-    const magic = w.length > 2 && /[aeiouy][^aeiouy]{1,2}e$/.test(w) && !/[aeiou]{2}[^aeiouy]+e$/.test(w);
-    if (magic) w = w.slice(0, -1);
+    const silentE = w.length > 3 && /[^aeiou]e$/.test(w);
+    const magic = w.length > 2 && /(?:^|[^aeiouy])[aeiouy][^aeiouy]{1,2}e$/.test(w);
+    if (silentE || magic) w = w.slice(0, -1);
     const m = w.match(/([aeiouy]+)([^aeiouy]*)$/);
     if (!m) return w;
     let v = m[1];

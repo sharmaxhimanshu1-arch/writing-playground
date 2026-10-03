@@ -43,9 +43,11 @@
     <aside class="panel panel-left" id="leftPanel" aria-label="Ideas and drafts">
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="ideas" id="tab-ideas" aria-selected="true">Ideas</button>
+        <button role="tab" type="button" data-tab="practice" id="tab-practice" aria-selected="false">Practice</button>
         <button role="tab" type="button" data-tab="drafts" id="tab-drafts" aria-selected="false">Drafts</button>
       </div>
       <div class="panel-body" id="pane-ideas" role="tabpanel" aria-labelledby="tab-ideas"></div>
+      <div class="panel-body" id="pane-practice" role="tabpanel" aria-labelledby="tab-practice" hidden></div>
       <div class="panel-body" id="pane-drafts" role="tabpanel" aria-labelledby="tab-drafts" hidden></div>
     </aside>
 
@@ -57,13 +59,14 @@
             <select class="chip chip-select" id="genreChip" aria-label="Check this draft as"></select>
             <button class="chip chip-btn" id="frameworkChip" type="button"></button>
             <button class="chip chip-btn" id="widthBtn" type="button" aria-pressed="false">Wide page</button>
+            <button class="chip chip-btn" id="listenBtn" type="button" aria-pressed="false" hidden>Listen</button>
           </div>
         </div>
         <div class="editor-wrap" id="editorWrap">
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
           <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start anywhere. Stuck? Take a prompt from the Ideas panel, or insert a framework outline from the Toolkit."></textarea>
         </div>
-        <p class="sheet-foot">Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
+        <p class="sheet-foot">Click a highlight for a one-click fix where there is one. Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
       </div>
     </main>
 
@@ -71,10 +74,12 @@
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="checks" id="tab-checks" aria-selected="true">Checks <span class="tab-score" id="tabScore"></span></button>
         <button role="tab" type="button" data-tab="frameworks" id="tab-frameworks" aria-selected="false">Frameworks</button>
+        <button role="tab" type="button" data-tab="coach" id="tab-coach" aria-selected="false">Coach</button>
         <button role="tab" type="button" data-tab="learn" id="tab-learn" aria-selected="false">Learn</button>
       </div>
       <div class="panel-body" id="pane-checks" role="tabpanel" aria-labelledby="tab-checks"></div>
       <div class="panel-body" id="pane-frameworks" role="tabpanel" aria-labelledby="tab-frameworks" hidden></div>
+      <div class="panel-body" id="pane-coach" role="tabpanel" aria-labelledby="tab-coach" hidden></div>
       <div class="panel-body" id="pane-learn" role="tabpanel" aria-labelledby="tab-learn" hidden></div>
     </aside>
     <div class="scrim" id="scrim" hidden></div>
@@ -91,6 +96,7 @@
   </footer>
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <div class="fix-card" id="fixCard" role="dialog" aria-label="Suggested fix" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
 <!--APP-END-->
@@ -104,7 +110,9 @@
 <script src="js/genres/essay.js"></script>
 <script src="js/genres/poetry.js"></script>
 <script src="js/genres/copy.js"></script>
+<script src="js/genres/drills.js"></script>
 <script src="js/ui/editor.js"></script>
+<script src="js/ui/coach.js"></script>
 <script src="js/app.js"></script>
 <!--SCRIPTS-END-->
 </body>

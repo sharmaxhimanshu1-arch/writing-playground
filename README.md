@@ -2,7 +2,7 @@
 
 A practice space for new writers. It gives you a wide page to write on, ideas when nothing comes to mind, and a toolkit of frameworks and lessons for the kind of writing you're doing. As you type, it checks your draft against that genre's rules and highlights what follows them and what breaks them.
 
-It runs entirely in your browser. There is no account and no server, and nothing you write leaves your machine.
+It runs entirely in your browser. There is no account and no server. Nothing you write leaves your machine unless you ask the AI coach for help.
 
 ## Getting started
 
@@ -16,9 +16,11 @@ Drafts are saved automatically in your browser's local storage. To keep a copy e
 | Area | What it does |
 | --- | --- |
 | **Genre tabs** (top) | Comedy, Video Script, Short Story, Essay & Blog, Poetry, Copywriting. Each genre has its own drafts, frameworks, prompts, lessons and checks. |
-| **Ideas** (left) | A prompt generator, an *idea builder* where you click any part to swap it, "stuck?" questions that push a draft forward, timed writing sprints, and a word goal. |
-| **The page** (center) | A distraction-free editor. Use **Wide page** for more room or **Focus** to hide both panels. |
-| **Checks** (right) | Your draft score, each rule's status (Following / Improve / Breaking / Tip), and why the rule exists. Click a check to show only its highlights, and click an item to jump to it in the text. |
+| **Ideas** (left) | Your daily word count and streak (with a 14-day chart), a prompt generator, an *idea builder* where you click any part to swap it, "stuck?" questions that push a draft forward, timed writing sprints, and a word goal. |
+| **Practice** (left) | 24 short drills, four per genre, each training one rule. A drill opens a flawed passage with its check turned on. Fix it until the check turns green, then compare with a model answer. |
+| **The page** (center) | A distraction-free editor. Click a highlight to get a one-click fix where one exists (delete a filler word, "said angrily" → "said", "utilize" → "use"). **Listen** reads the draft (or your selection) aloud, so you can hear a joke's timing or a script's rhythm. Use **Wide page** for more room or **Focus** to hide both panels. |
+| **Checks** (right) | Your draft score, each rule's status (Following / Improve / Breaking / Tip), and why the rule exists. Click a check to show only its highlights, click an item to jump to it, or fix every occurrence at once. |
+| **Coach** (right) | An AI writing coach powered by Claude: **Review my draft** (strengths, the fixes that matter most, and a rewrite you can drop in for each), **Rewrite a passage** (select text, pick a goal like "Sharpen the punchline", get three versions), **Brainstorm** (five ideas with first lines), and **Ask the coach** questions about your draft. It runs when the playground is opened as a Claude artifact and uses the viewer's own Claude account. |
 | **Frameworks** (right) | Proven structures for the genre, each with step-by-step beats, a worked example, and an **Insert outline** button. Once inserted, the checker tracks which beats you have written. |
 | **Learn** (right) | Core principles, common beginner mistakes, and a glossary for the genre. |
 
@@ -62,7 +64,9 @@ js/core/text.js       parser: sentences, words, syllables, readability, sections
 js/core/lexicon.js    word lists (filler, clichés, senses, buzzwords…)
 js/core/checks.js     check framework and checks shared by all genres
 js/genres/*.js        one file per genre: checks, frameworks, lessons, prompts, example draft
+js/genres/drills.js   practice drills for every genre
 js/ui/editor.js       highlighting editor (transparent textarea over a rendered backdrop)
+js/ui/coach.js        AI coach (uses the Claude artifact runtime when available)
 js/app.js             panels, drafts, prompts, sprints, wiring
 scripts/build.js      bundles everything into dist/*.html
 tests/run-checks.js   runs every genre's checks against its examples
@@ -71,7 +75,7 @@ tests/run-checks.js   runs every genre's checks against its examples
 ## Development
 
 ```bash
-npm test         # run all checks against the sample drafts and framework examples
+npm test         # run all checks against the sample drafts, framework examples and drills
 npm run build    # rebuild dist/writing-playground.html after changing anything
 ```
 
@@ -79,4 +83,4 @@ npm run build    # rebuild dist/writing-playground.html after changing anything
 
 Create `js/genres/<name>.js` that calls `WP.genres.push({...})` with `id`, `name`, `tagline`, `checks`, `frameworks`, `prompts`, `generator`, `nudges`, `guide` and `sample` (copy an existing genre file as a template). Then add a `<script>` tag for it in `index.html`, inside the `SCRIPTS` markers, and add the file to the list in `tests/run-checks.js`.
 
-A check is an object with `id`, `title`, `group`, `why` and a `run(ctx)` function that returns `{ status, summary, marks }`. The helpers in `js/core/checks.js` (`C.phrases`, `C.filler`, `C.longSentences`…) cover most cases.
+A check is an object with `id`, `title`, `group`, `why` and a `run(ctx)` function that returns `{ status, summary, marks }`. A mark can carry `fixes: [{ label, text }]`; an empty `text` deletes the marked words and the app tidies the spacing and capitals around them. The helpers in `js/core/checks.js` (`C.phrases`, `C.filler`, `C.longSentences`…) cover most cases.

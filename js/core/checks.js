@@ -36,6 +36,9 @@
     return new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
   }
 
+  /** A fix replaces the mark's text. An empty `text` deletes it (the app tidies spaces). */
+  const DELETE = { label: 'Delete it', text: '' };
+
   const C = {};
 
   /** Generic “find these phrases” check. */
@@ -53,7 +56,12 @@
         const res = o.grade(hits.length, ctx, hits) || null;
         if (!res) return null;
         const note = typeof o.note === 'function' ? o.note : () => o.note;
-        res.marks = (res.marks || []).concat(hits.map((h) => mark(h, o.level, note(h, ctx))));
+        res.marks = (res.marks || []).concat(hits.map((h) => {
+          const m = mark(h, o.level, note(h, ctx));
+          const fixes = typeof o.fixes === 'function' ? o.fixes(h, ctx) : o.fixes;
+          if (fixes && fixes.length) m.fixes = fixes;
+          return m;
+        }));
         return res;
       },
     };
@@ -66,6 +74,7 @@
       why: 'Words like “very”, “really” and “just” pad a sentence without adding meaning. Cut them, or swap the pair for one stronger word (“very tired” → “exhausted”).',
       list: lex.filler,
       level: 'warn',
+      fixes: [DELETE],
       note: (h) => `Filler: ${quote(h.text)}. Cut it or choose a stronger word.`,
       grade(n, ctx) {
         const r = per100(n, ctx);
@@ -301,11 +310,12 @@
   });
 
   /** Runs a genre's checks and computes an overall score. */
-  function run(checks, ctx) {
+  function run(checks, ctx, opts = {}) {
     const results = [];
+    const force = new Set(opts.force || []);
     for (const c of checks) {
       const base = { id: c.id, title: c.title, group: c.group || 'Style', why: c.why };
-      const min = c.minWords ?? 20;
+      const min = force.has(c.id) ? Math.min(1, c.minWords ?? 20) : c.minWords ?? 20;
       if (ctx.wordCount < min) {
         results.push(Object.assign(base, { status: 'na', summary: `Starts checking after ${min} words.`, marks: [] }));
         continue;
@@ -331,6 +341,6 @@
     return { results, score };
   }
 
-  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus };
+  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus, DELETE };
   WP.genres = WP.genres || [];
 })(window.WP = window.WP || {});

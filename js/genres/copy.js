@@ -15,6 +15,13 @@
   const MARKED_POWER = ['free', 'proven', 'instantly', 'easy', 'secret', 'guaranteed', 'exclusive', 'discover',
     'effortless', 'bonus', 'imagine', 'surprising'];
 
+  const PLAIN = {
+    utilize: 'use', utilise: 'use', leverage: 'use', leveraging: 'using', seamless: 'smooth', seamlessly: 'smoothly',
+    solutions: 'tools', robust: 'reliable', empower: 'help', empowering: 'helping', 'cutting-edge': 'new',
+    'cutting edge': 'new', innovative: 'new', 'state-of-the-art': 'modern', 'world-class': 'excellent',
+    'best-in-class': 'top-rated', revolutionary: 'new', 'next-generation': 'new',
+  };
+
   function headline(ctx) {
     return ctx.sentences[0];
   }
@@ -117,6 +124,10 @@
       why: 'Words like “innovative”, “seamless” and “solutions” are so common that readers’ eyes slide past them. Say what the thing actually does.',
       list: lex.buzzwords,
       level: 'bad',
+      fixes: (h) => {
+        const plain = PLAIN[h.text.toLowerCase().replace(/\s+/g, ' ')];
+        return plain ? [{ label: `Change to “${plain}”`, text: plain }] : [];
+      },
       note: (h) => `${quote(h.text)} is a buzzword. What does it actually mean for the customer?`,
       grade: (n) => ({ status: n === 0 ? 'pass' : n <= 2 ? 'warn' : 'fail', summary: n ? `${plural(n, 'buzzword')}.` : 'Plain, concrete language.' }),
     }),
@@ -131,7 +142,7 @@
         const power = T.findAll(ctx, T.phraseRegex(MARKED_POWER));
         const bangs = T.findAll(ctx, /!+/g);
         const marks = power.map((h) => mark(h, 'good', `Power word ${quote(h.text)}.`))
-          .concat(bangs.length > 2 ? bangs.map((h) => mark(h, 'warn', 'Exclamation marks feel pushy. Let the words carry the energy.')) : []);
+          .concat(bangs.length > 2 ? bangs.map((h) => Object.assign(mark(h, 'warn', 'Exclamation marks feel pushy. Let the words carry the energy.'), { fixes: [{ label: 'Change to a full stop', text: '.' }] })) : []);
         const rate = per100(power.length, ctx);
         return {
           status: bangs.length > 2 || rate > 6 ? 'warn' : 'pass',
