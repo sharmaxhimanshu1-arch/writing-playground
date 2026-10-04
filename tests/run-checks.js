@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const files = [
   'js/core/text.js', 'js/core/lexicon.js', 'js/core/checks.js',
   'js/genres/comedy.js', 'js/genres/video.js', 'js/genres/story.js',
-  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js', 'js/genres/warmups.js',
+  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js', 'js/genres/warmups.js', 'js/genres/plans.js',
 ];
 const sandbox = { console };
 sandbox.window = sandbox;

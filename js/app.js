@@ -454,6 +454,149 @@
     applyTheme();
   }
 
+  /* ---------- plan this piece ---------- */
+
+  function planFor(g) {
+    return (WP.plans && WP.plans[g.id]) || [];
+  }
+
+  function renderPlan(d) {
+    const g = genreById(d.genre);
+    const qs = planFor(g);
+    if (!qs.length || d.game) return '';
+    const plan = d.plan || {};
+    const answered = qs.filter((q) => (plan[q.id] || '').trim()).length;
+    const open = answered < qs.length && !d.sample && !d.example;
+    return `<section class="section">
+        <details class="plan" id="planBox" ${open ? 'open' : ''}>
+          <summary><span><b>Plan this piece</b> <span class="small muted">${answered} of ${qs.length} answered</span></span></summary>
+          <p class="small muted">Answer these before you write, in a few words each. A clear plan is the difference between staring at the page and knowing your next sentence. The coach reads your plan too.</p>
+          <div class="plan-fields">${qs.map((q) => `<label class="plan-field" for="plan-${q.id}">
+            <span><b>${esc(q.q)}</b> <span class="small muted">${esc(q.hint)}</span></span>
+            <textarea id="plan-${q.id}" data-plan="${q.id}" rows="2" placeholder="${esc(q.ph)}">${esc(plan[q.id] || '')}</textarea>
+          </label>`).join('')}</div>
+        </details>
+      </section>`;
+  }
+
+  /* ---------- writing habits ---------- */
+
+  function realDrafts() {
+    return state.docs.filter((d) => !d.sample && !d.example && !d.drill && !d.game);
+  }
+
+  function openHabits() {
+    const docs = realDrafts().filter((d) => T.parse(d.text).wordCount >= 50);
+    if (!docs.length) {
+      return openModal('Your writing habits', '<p>Write at least one draft of 50 words or more (not an example or a drill), and this report will show the patterns across everything you write.</p>');
+    }
+    const tally = new Map();
+    const words = new Map();
+    let total = 0;
+    for (const d of docs) {
+      const g = genreById(d.genre);
+      const ctx = T.parse(d.text, { framework: d.framework, genre: g.id });
+      ctx.frameworkDef = g.frameworks.find((f) => f.id === d.framework) || null;
+      total += ctx.wordCount;
+      for (const w of ctx.words) {
+        if (w.lower.length < 4 || WP.lex.stopwords.has(w.lower) || /^\d/.test(w.lower)) continue;
+        words.set(w.lower, (words.get(w.lower) || 0) + 1);
+      }
+      for (const r of WP.checks.run(g.checks, ctx).results) {
+        if (r.id === 'structure' || !(r.status === 'fail' || r.status === 'warn')) continue;
+        const t = tally.get(r.id) || { id: r.id, title: r.title, why: r.why, drafts: 0, genres: new Set() };
+        t.drafts++;
+        t.genres.add(g.id);
+        tally.set(r.id, t);
+      }
+    }
+    const top = [...tally.values()].sort((a, b) => b.drafts - a.drafts).slice(0, 5);
+    const drillFor = (t) => {
+      for (const gid of [genre().id, ...t.genres, ...WP.genres.map((g) => g.id)]) {
+        const dr = ((WP.drills || {})[gid] || []).find((x) => x.rule === t.id);
+        if (dr) return { gid, dr };
+      }
+      return null;
+    };
+    const lean = [...words.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    openModal('Your writing habits', `
+      <p class="small muted">Across ${docs.length} ${docs.length === 1 ? 'draft' : 'drafts'} and ${total.toLocaleString()} words. Examples, drills and warm-ups aren’t counted.</p>
+      ${top.length ? `<p class="eyebrow">Your most common issues</p>
+      <ol class="habits">${top.map((t) => {
+        const link = drillFor(t);
+        return `<li>
+          <div><b>${esc(t.title)}</b> <span class="small muted">in ${t.drafts} of ${docs.length} ${docs.length === 1 ? 'draft' : 'drafts'}</span></div>
+          <p class="small muted">${esc(t.why || '')}</p>
+          ${link ? `<button class="btn btn-small btn-primary" type="button" data-habit-drill="${link.gid}:${link.dr.id}">Practice: ${esc(link.dr.title)}</button>` : ''}
+        </li>`;
+      }).join('')}</ol>` : '<p>No repeated issues. Your drafts follow their genre’s rules. Try a new genre or a harder framework.</p>'}
+      <p class="eyebrow">Words you lean on</p>
+      <p class="small muted">Your most-used words (ignoring short, common ones). If a word here isn’t central to what you write about, it may be a habit.</p>
+      ${lean.length && total >= 300 ? `<div class="lean">${lean.map(([w, n]) => `<span class="chip">${esc(w)} <b>${n}</b></span>`).join('')}</div>` : '<p class="small">Write a few hundred words in total and your most-repeated words will show up here.</p>'}`);
+  }
+
+  /* ---------- what improved ---------- */
+
+  function resultsFor(d, text) {
+    const g = genreById(d.genre);
+    const ctx = T.parse(text, { framework: d.framework, genre: g.id });
+    ctx.frameworkDef = g.frameworks.find((f) => f.id === d.framework) || null;
+    const muted = new Set(prefs.muted[g.id] || []);
+    return WP.checks.run(g.checks.filter((c) => !muted.has(c.id)), ctx);
+  }
+
+  function openImproved() {
+    const d = doc();
+    const first = (d.versions || [])[0];
+    if (!first) return;
+    const a = resultsFor(d, first.text);
+    const b = resultsFor(d, d.text);
+    const bad = (r) => r && (r.status === 'fail' || r.status === 'warn');
+    const fixed = [];
+    const worse = [];
+    const still = [];
+    for (const r of b.results) {
+      const old = a.results.find((x) => x.id === r.id);
+      if (!old || old.status === 'na' || r.status === 'na') continue;
+      if (bad(old) && r.status === 'pass') fixed.push(r);
+      else if (!bad(old) && bad(r)) worse.push(r);
+      else if (bad(old) && bad(r)) still.push(r);
+    }
+    const list = (items, cls) => items.length ? `<ul class="improved ${cls}">${items.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ul>` : '<p class="small muted">None.</p>';
+    openModal('What improved', `
+      <p class="small muted">Comparing your first saved version (${esc(new Date(first.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}, ${first.words} words) with today (${T.parse(d.text).wordCount} words). Score <b>${a.score == null ? '–' : a.score}</b> → <b>${b.score == null ? '–' : b.score}</b>.</p>
+      <p class="eyebrow">Fixed since then</p>${list(fixed, 'fixed')}
+      <p class="eyebrow">Still to work on</p>${list(still, 'still')}
+      <p class="eyebrow">New since then</p>${list(worse, 'worse')}`);
+  }
+
+  /* ---------- preview ---------- */
+
+  function cleanText(text) {
+    return text.split('\n').filter((l) => !/^\s*>/.test(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function openPreview() {
+    const d = doc();
+    const blocks = cleanText(d.text).split(/\n\s*\n/);
+    const html = blocks.map((b) => {
+      const h = b.match(/^#{1,6}\s+(.*)$/);
+      if (h && !b.includes('\n')) return `<h3>${esc(h[1])}</h3>`;
+      const inner = esc(b).replace(/\[[^\]\n]*\]/g, (m) => `<span class="preview-cue">${m}</span>`).replace(/^#{1,6}\s+(.*)$/gm, '<b>$1</b>');
+      return `<p>${inner}</p>`;
+    }).join('');
+    const words = T.parse(d.text).wordCount;
+    const g = genre();
+    const spoken = ['video', 'comedy', 'speech'].includes(g.id);
+    openModal('Preview', `
+      <article class="preview">
+        <h2>${esc(d.title || 'Untitled draft')}</h2>
+        <p class="small muted">${words} words · ${spoken ? `about ${Math.max(1, Math.round(words / 140))} min spoken` : `about ${Math.max(1, Math.round(words / 230))} min to read`} · notes hidden</p>
+        ${html || '<p class="muted">Nothing to preview yet.</p>'}
+      </article>
+      <div class="btn-row"><button class="btn" type="button" data-act="copy-clean">Copy without notes</button></div>`);
+  }
+
   /* ---------- display settings ---------- */
 
   const DISPLAY = {
@@ -667,6 +810,7 @@
       <section class="section">
         <p class="eyebrow">Your writing</p>
         <div id="progressBox"></div>
+        <div class="btn-row"><button class="btn" type="button" data-act="habits">See my writing habits</button></div>
       </section>
 
       ${renderChallengeCard(g)}
@@ -836,7 +980,7 @@
     return `<section class="section">
         <p class="eyebrow">History of this draft</p>
         ${spark}
-        <div class="btn-row"><button class="btn" type="button" data-act="save-version">Save a version now</button></div>
+        <div class="btn-row"><button class="btn" type="button" data-act="save-version">Save a version now</button>${(d.versions || []).length ? '<button class="btn" type="button" data-act="improved">What improved?</button>' : ''}</div>
         ${vs.length ? `<ul class="version-list">${vs.map((v) => {
           const i = d.versions.indexOf(v);
           return `<li class="version">
@@ -1147,8 +1291,8 @@
       ${renderWarmups()}`;
   }
 
-  function startDrill(id) {
-    const g = genre();
+  function startDrill(id, genreId) {
+    const g = genreId ? genreById(genreId) : genre();
     const drill = drillsFor(g).find((x) => x.id === id);
     if (!drill) return;
     let d = state.docs.find((x) => x.drill && x.drill.id === id);
@@ -1295,7 +1439,6 @@
         ${state.docs.length > 5 ? `<label class="sr-only" for="draftSearch">Search drafts</label><input class="search" id="draftSearch" type="search" placeholder="Search ${state.docs.length} drafts" value="${esc(state.draftQuery || '')}" autocomplete="off">` : ''}
         <ul class="draft-list">${items || '<li class="small muted">No drafts match.</li>'}</ul>
       </section>
-      ${renderStorage(canDownload)}
       ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
@@ -1304,7 +1447,8 @@
           <button class="btn" type="button" data-act="duplicate">Make a copy</button>
           ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
-      </section>`;
+      </section>
+      ${renderStorage(canDownload)}`;
   }
 
   function renderStorage(canDownload) {
@@ -1589,6 +1733,7 @@
         <p class="eyebrow">${esc(g.name)} frameworks</p>
         <p class="small muted">A framework is a proven shape for a piece of writing. Pick one, insert its outline, and fill each beat. The checker tracks which beats you have written.</p>
       </section>
+      ${renderPlan(d)}
       ${renderOutline(ctx)}
       <section class="section">
         ${g.frameworks.map((fw) => {
@@ -2041,6 +2186,24 @@
       applyDisplay();
     });
     $('modalBody').addEventListener('click', (e) => {
+      const hd = e.target.closest('[data-habit-drill]');
+      if (hd) {
+        const [gid, did] = hd.dataset.habitDrill.split(':');
+        closeModal();
+        if (window.matchMedia('(max-width: 960px)').matches) $('layout').classList.remove('show-left', 'show-right');
+        setTab('left', 'practice');
+        startDrill(did, gid);
+        return;
+      }
+      if (e.target.closest('[data-act="copy-clean"]')) {
+        const text = cleanText(doc().text);
+        try {
+          navigator.clipboard.writeText(text).then(() => toast('Copied without notes.'), () => toast('Copy was blocked. Select the preview text and copy it.'));
+        } catch (err) {
+          toast('Copy was blocked. Select the preview text and copy it.');
+        }
+        return;
+      }
       const b = e.target.closest('[data-study-insert]');
       if (!b) return;
       closeModal();
@@ -2151,6 +2314,19 @@
       renderChecks();
     });
     $('genreSelect').addEventListener('change', (e) => setGenre(e.target.value));
+    $('pane-frameworks').addEventListener('input', (e) => {
+      const key = e.target.dataset && e.target.dataset.plan;
+      if (!key) return;
+      const d = doc();
+      d.plan = Object.assign({}, d.plan, { [key]: e.target.value });
+      d.updated = Date.now();
+      persist();
+      const qs = planFor(genre());
+      const n = qs.filter((q) => (d.plan[q.id] || '').trim()).length;
+      const sum = document.querySelector('#planBox summary .small');
+      if (sum) sum.textContent = `${n} of ${qs.length} answered`;
+    });
+    $('previewBtn').addEventListener('click', openPreview);
 
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');
@@ -2220,6 +2396,7 @@
         insertNote(state.nudge);
         toast('Question added as a note. Answer it on the next line.');
       } else if (act === 'challenge') return startChallenge();
+      else if (act === 'habits') return openHabits();
       else if (act === 'sprint') return startSprint(Number(b.dataset.min));
       else if (act === 'stop-sprint') return stopSprint(false);
       renderIdeas();
@@ -2258,6 +2435,7 @@
       } else if (t.dataset.act === 'copy') copyText();
       else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
       else if (t.dataset.act === 'backup') downloadBackup();
+      else if (t.dataset.act === 'improved') openImproved();
       else if (t.dataset.act === 'duplicate') duplicateDoc();
       else if (t.dataset.act === 'save-version') {
         if (pushVersion(doc(), 'Saved by you')) toast('Version saved.');
