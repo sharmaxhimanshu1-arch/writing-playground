@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const files = [
   'js/core/text.js', 'js/core/lexicon.js', 'js/core/checks.js',
   'js/genres/comedy.js', 'js/genres/video.js', 'js/genres/story.js',
-  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js',
+  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js', 'js/genres/warmups.js',
 ];
 const sandbox = { console };
 sandbox.window = sandbox;
@@ -67,6 +67,32 @@ for (const g of WP.genres) {
   analyse(g, '', null);
   analyse(g, '## Heading only\n> a note\n[CUE]', null);
   analyse(g, 'One.', null);
+}
+
+// Warm-up games: a failing and a passing attempt for each.
+const attempts = {
+  'six-word': ['Too few words here.', 'For sale: baby shoes, never worn.'],
+  fifty: ['Short.', Array.from({ length: 50 }, (_, i) => 'word' + i).join(' ') + '.'],
+  lipogram: ['The end is near.', Array.from({ length: 41 }, () => 'cat').join(' ') + '.'],
+  'three-words': ['Nothing here at all.', null],
+  abc: ['One. Two. Three. Four. Five.', 'Ants march. Bees hum. Cats nap. Dogs bark. Eels swim.'],
+  'no-crutches': ['It was very nice.', Array.from({ length: 81 }, () => 'quiet').join(' ') + '.'],
+  'five-senses': ['A room.', 'The red lamp glowed. A clock ticked. Coffee and smoke hung in the air. The tea tasted bitter. The chair was rough and cold.'],
+  'dialogue-only': ['She walked in.', Array.from({ length: 8 }, (_, i) => `"Line ${i} of the talk."`).join('\n')],
+};
+for (const game of WP.warmups.list) {
+  const params = game.setup ? game.setup() : {};
+  const checks = game.checks(params);
+  const [bad, good0] = attempts[game.id];
+  const good = good0 || `The ${params.words.join(' and the ')} ` + Array.from({ length: 60 }, () => 'sat').join(' ') + '.';
+  const status = (t) => {
+    const ctx = WP.text.parse(t, {});
+    const r = WP.checks.run(checks, ctx, { force: checks.map((c) => c.id) }).results;
+    return r.every((x) => x.status === 'pass');
+  };
+  const ok = !status(bad) && status(good);
+  console.log(`warm-up ${game.id}: ${ok ? 'ok' : 'WRONG'}`);
+  if (!ok) { failures++; origError('Warm-up check misbehaves:', game.id); }
 }
 
 console.log('\nSyllables:', ['haiku', 'beautiful', 'radiator', 'window', 'table', 'wanted', 'jumped', 'the', 'fire'].map((w) => w + '=' + WP.text.syllables(w)).join(' '));

@@ -1064,3 +1064,48 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .score-spark .bar-hit { fill: transparent; }
 
 .challenge.done { border-color: var(--good); }
+
+/* ---------- Compact top bar ---------- */
+
+.genre-select {
+  display: none;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-width: 0;
+  max-width: 220px;
+}
+.topbar.compact .genre-tabs { visibility: hidden; flex: 0 0 0; width: 0; overflow: hidden; }
+.topbar.compact .genre-select { display: block; flex: 1 1 auto; margin-right: auto; }
+
+/* ---------- Learning path ---------- */
+
+.path-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.path-level { font-family: var(--font-editor); font-size: 1.375rem; font-weight: 600; }
+.path-bar { display: flex; gap: 3px; }
+.path-bar span { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.path-bar span.done { background: var(--good); }
+.path-bar span.next { background: var(--accent); }
+.path-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.path-steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: var(--text-sm); }
+.path-steps li.next { background: var(--raised); border: 1px solid var(--accent); border-radius: var(--radius); padding: 8px; margin-inline: -8px; }
+.path-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  border: 1px solid var(--line); color: var(--muted);
+}
+.path-steps li.done .path-num { background: var(--good); border-color: var(--good); color: var(--sheet); }
+.path-steps li.done .path-text b { color: var(--muted); font-weight: 400; }
+.path-steps li.next .path-num { border-color: var(--accent); color: var(--accent); }
+.path-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+
+/* ---------- Check controls ---------- */
+
+.toggle { display: flex; gap: 8px; align-items: flex-start; font-size: var(--text-sm); cursor: pointer; }
+.toggle input { margin-top: 3px; accent-color: var(--accent); }
+.muted-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); }
+.muted-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); }
