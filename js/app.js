@@ -200,20 +200,18 @@
       if (!$('starter').hidden || !text.trim()) renderStarter();
     },
     onCaret(pos) {
-      const here = editor.marksAt(pos);
-      const note = here.sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
-      $('cursorNote').innerHTML = note ? `<b>${esc(note.checkTitle)}:</b> ${esc(note.note)}` : '';
+      updateCursorNote(pos);
     },
     onHover(info) {
       const tip = $('tooltip');
-      if (!info || !info.marks.length) {
+      if (!info || !info.marks.length || !$('fixCard').hidden) {
         tip.hidden = true;
         return;
       }
       tip.innerHTML = info.marks.slice(0, 3).map((m) => `
         <div class="tip-row">
           <span class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</span>
-          <span>${esc(m.note)}</span>
+          <span>${esc(noteText(m))}</span>
         </div>`).join('');
       tip.hidden = false;
       tip.dataset.src = 'editor';
@@ -240,6 +238,15 @@
     analysisTimer = setTimeout(analyze, 350);
   }
 
+  function updateCursorNote(pos) {
+    const ta = $('editor');
+    const at = pos == null ? ta.selectionStart : pos;
+    const note = document.activeElement === ta || pos != null
+      ? editor.marksAt(at).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0]
+      : null;
+    $('cursorNote').innerHTML = note ? `<b>${esc(note.checkTitle)}:</b> ${esc(noteText(note))}` : '';
+  }
+
   function analyze() {
     const d = doc();
     const g = genre();
@@ -251,6 +258,10 @@
     const checks = game ? gameChecks : g.checks.filter((c) => !muted.has(c.id));
     const force = (d.drill ? [d.drill.rule] : []).concat(gameChecks.map((c) => c.id));
     const { results, score } = WP.checks.run(checks, ctx, { force });
+    // Show how an edit moved the score, but not when opening a draft or switching genre.
+    const same = state.scoreKey === d.id + ':' + g.id + ':' + (d.framework || '');
+    state.scoreDelta = same && state.score != null && score != null && score !== state.score ? { v: score - state.score, at: Date.now() } : state.scoreDelta;
+    state.scoreKey = d.id + ':' + g.id + ':' + (d.framework || '');
     state.ctx = ctx;
     state.results = results;
     state.score = score;
@@ -258,6 +269,7 @@
     state.allMarks.forEach((m, i) => (m.idx = i));
     if (state.spotlight && !results.some((r) => r.id === state.spotlight)) state.spotlight = null;
     editor.setMarks(state.allMarks);
+    updateCursorNote();
     trackWords(d.id, ctx.wordCount);
     checkDrill(d, results);
     checkChallenge(d, ctx.wordCount);
@@ -598,7 +610,19 @@
         <p class="small muted">${words} words · ${spoken ? `about ${Math.max(1, Math.round(words / 140))} min spoken` : `about ${Math.max(1, Math.round(words / 230))} min to read`} · notes hidden</p>
         ${html || '<p class="muted">Nothing to preview yet.</p>'}
       </article>
-      <div class="btn-row"><button class="btn" type="button" data-act="copy-clean">Copy without notes</button></div>`);
+      <div class="btn-row"><button class="btn" type="button" data-act="copy-clean">Copy without notes</button>${WP.ARTIFACT || typeof window.print !== 'function' ? '' : '<button class="btn" type="button" data-act="print">Print or save as PDF</button>'}</div>`);
+  }
+
+  function printPreview() {
+    document.body.classList.add('print-preview');
+    const done = () => {
+      document.body.classList.remove('print-preview');
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    // Some browsers don't fire afterprint when print is blocked.
+    setTimeout(() => { if (!window.matchMedia('print').matches) done(); }, 1000);
   }
 
   /* ---------- display settings ---------- */
@@ -1640,7 +1664,7 @@
     pane.innerHTML = `
       <section class="section">
         <div class="score-head">
-          <div class="score-num" aria-label="Draft score">${state.score == null ? '<span class="score-none">No score yet</span>' : `${state.score}<small>/100</small>`}</div>
+          <div class="score-num" aria-label="Draft score">${state.score == null ? '<span class="score-none">No score yet</span>' : `${state.score}<small>/100</small>${renderDelta()}`}</div>
           <div ${state.score == null ? 'hidden' : ''}>
             <div class="meter" aria-hidden="true">
               ${scored ? `<span class="m-pass" style="width:${(counts.pass / scored) * 100}%"></span><span class="m-warn" style="width:${(counts.warn / scored) * 100}%"></span><span class="m-fail" style="width:${(counts.fail / scored) * 100}%"></span>` : ''}
@@ -1682,6 +1706,17 @@
       ${(() => { const r = empty ? '' : renderRhythm(state.ctx); return r ? `<section class="section">${r}</section>` : ''; })()}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
+  }
+
+  function renderDelta() {
+    const dl = state.scoreDelta;
+    if (!dl || Date.now() - dl.at > 2400) return '';
+    clearTimeout(state.deltaTimer);
+    state.deltaTimer = setTimeout(() => {
+      const el = document.querySelector('.score-delta');
+      if (el) el.remove();
+    }, 2400 - (Date.now() - dl.at));
+    return `<span class="score-delta ${dl.v > 0 ? 'up' : 'down'}" aria-hidden="true">${dl.v > 0 ? '+' : '−'}${Math.abs(dl.v)}</span>`;
   }
 
   function renderMuted() {
@@ -1730,7 +1765,7 @@
           <li class="hit hit-${m.level}">
             <button type="button" class="hit-main" data-hit="${m.start}:${m.end}">
               <span class="hit-text">${esc(snippet(text, m))}</span>
-              <span class="hit-note">${esc(m.note)}</span>
+              <span class="hit-note">${esc(noteText(m))}</span>
             </button>
             ${m.fixes ? `<span class="hit-fixes">${m.fixes.map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}</span>` : ''}
           </li>`).join('')}</ul>
@@ -1992,19 +2027,53 @@
     const m = here.filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0]
       || here.filter((x) => x.level !== 'good').sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
     if (!m) return hideFixCard();
+    openFixCard(m);
+  }
+
+  /** Issues the reader can currently see, in document order. */
+  function visibleIssues() {
+    return state.allMarks
+      .filter((m) => (m.level === 'warn' || m.level === 'bad') && prefs.levels[m.level] && (!state.spotlight || m.checkId === state.spotlight))
+      .sort((a, b) => a.start - b.start || levelRank(b.level) - levelRank(a.level));
+  }
+
+  function openFixCard(m) {
     state.fixMark = m;
+    const issues = visibleIssues();
+    const others = issues.filter((x) => x.start !== m.start).length;
     const card = $('fixCard');
     card.innerHTML = `
       <p class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</p>
-      <p>${esc(m.note)}</p>
+      <p>${esc(noteText(m))}</p>
       <div class="btn-row">
         ${(m.fixes || []).map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
         ${WP.coach.isReady() ? '<button class="btn" type="button" data-card-coach>Ask the coach</button>' : ''}
+        ${others ? '<button class="btn" type="button" data-card-next title="Next issue (Ctrl/⌘ + .)">Next issue ›</button>' : ''}
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
     placeFixCard();
     $('tooltip').hidden = true;
+  }
+
+  /** Moves to the next visible issue after the current card (or the caret), wrapping at the end. */
+  function nextIssueCard() {
+    const issues = visibleIssues();
+    if (!issues.length) return hideFixCard();
+    const from = state.fixMark ? state.fixMark.start : $('editor').selectionEnd;
+    const next = issues.find((x) => x.start > from) || issues[0];
+    editor.reveal(next.start, next.end);
+    openFixCard(next);
+  }
+
+  /** A mark's note without a leading label that repeats its check's title ("Filler: …" under "Filler words"). */
+  function noteText(m) {
+    const lead = m.note.match(/^([A-Za-z][\w -]{1,24}):\s+/);
+    if (lead && m.checkTitle && m.checkTitle.toLowerCase().startsWith(lead[1].toLowerCase())) {
+      const rest = m.note.slice(lead[0].length);
+      return rest.charAt(0).toUpperCase() + rest.slice(1);
+    }
+    return m.note;
   }
 
   function placeFixCard() {
@@ -2253,6 +2322,7 @@
       const b = e.target.closest('button');
       if (!b) return;
       if (b.hasAttribute('data-card-close')) return hideFixCard();
+      if (b.hasAttribute('data-card-next')) return nextIssueCard();
       if (b.hasAttribute('data-card-coach') && state.fixMark) return askCoachAbout(state.fixMark);
       if (b.dataset.cardFix && state.fixMark) applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
     });
@@ -2286,6 +2356,7 @@
         startDrill(did, gid);
         return;
       }
+      if (e.target.closest('[data-act="print"]')) return printPreview();
       if (e.target.closest('[data-act="copy-clean"]')) {
         const text = cleanText(doc().text);
         try {
