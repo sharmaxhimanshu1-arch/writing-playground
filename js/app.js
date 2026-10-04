@@ -9,9 +9,9 @@
   const STORE_PREFS = 'wp.prefs.v1';
   const LEVELS = [
     { id: 'good', label: 'Following' },
-    { id: 'warn', label: 'Consider' },
+    { id: 'warn', label: 'Improve' },
     { id: 'bad', label: 'Breaking' },
-    { id: 'info', label: 'Info' },
+    { id: 'info', label: 'Tip' },
   ];
   const STATUS_LABEL = { pass: 'Following', warn: 'Improve', fail: 'Breaking', info: 'Tip', na: 'Waiting' };
   const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, info: 3, na: 4 };
@@ -334,7 +334,7 @@
     const st = streak();
     const total = days.reduce((a, x) => a + x.words, 0);
     if (!total) {
-      el.innerHTML = `<p class="small muted">Nothing written yet in the last 14 days. Your daily words and streak will show up here.</p>`;
+      el.innerHTML = `<p class="small muted">Your daily word count and streak show up here once you start writing.</p>`;
       return;
     }
     el.innerHTML = `
@@ -425,7 +425,6 @@
       $('toggleRight').setAttribute('aria-expanded', String(prefs.showRight && !prefs.focus));
     }
     $('sheet').classList.toggle('wide', prefs.wide);
-    $('widthBtn').setAttribute('aria-pressed', String(prefs.wide));
   }
 
   function togglePanel(side) {
@@ -635,6 +634,11 @@
         ${group('size', 'Text size')}
         ${group('spacing', 'Line spacing')}
         ${group('font', 'Font')}
+        <fieldset class="seg">
+          <legend>Page width</legend>
+          <label><input type="radio" name="disp-width" value="normal" ${prefs.wide ? '' : 'checked'}><span>Normal</span></label>
+          <label><input type="radio" name="disp-width" value="wide" ${prefs.wide ? 'checked' : ''}><span>Wide</span></label>
+        </fieldset>
         <p class="small muted">Easy-read uses Atkinson Hyperlegible, a typeface designed for readers with low vision. These settings only change how the page looks to you.</p>
       </form>`);
   }
@@ -811,36 +815,32 @@
     if (!state.prompt) state.prompt = pick(g.prompts);
     if (!state.idea) state.idea = buildIdea(g);
     const sprint = state.sprint;
+    const build = prefs.ideaMode === 'build';
     $('pane-ideas').innerHTML = `
-      <section class="section">
-        <p class="eyebrow">Your writing</p>
-        <div id="progressBox"></div>
-        <div class="btn-row"><button class="btn" type="button" data-act="habits">See my writing habits</button></div>
-      </section>
-
       ${renderChallengeCard(g)}
 
       <section class="section">
-        <p class="eyebrow">Prompt · ${esc(g.name)}</p>
-        <div class="idea-card">
-          <p class="idea-text">${esc(state.prompt)}</p>
-          <div class="btn-row">
-            <button class="btn" type="button" data-act="next-prompt">Another prompt</button>
-            <button class="btn btn-primary" type="button" data-act="use-prompt">Use this</button>
+        <div class="eyebrow-row">
+          <p class="eyebrow">Get an idea</p>
+          <div class="mode-switch" role="group" aria-label="Kind of idea">
+            <button type="button" data-act="idea-mode" data-mode="prompt" aria-pressed="${!build}">Prompt</button>
+            <button type="button" data-act="idea-mode" data-mode="build" aria-pressed="${build}">Build one</button>
           </div>
         </div>
-      </section>
-
-      <section class="section">
-        <p class="eyebrow">Idea builder</p>
-        <div class="idea-card">
+        ${build ? `<div class="idea-card">
           <p class="idea-text">${ideaText(g, state.idea, true)}</p>
           <p class="small muted">Tap any highlighted part to swap just that piece.</p>
           <div class="btn-row">
             <button class="btn" type="button" data-act="shuffle-idea">Shuffle all</button>
             <button class="btn btn-primary" type="button" data-act="use-idea">Use this</button>
           </div>
-        </div>
+        </div>` : `<div class="idea-card">
+          <p class="idea-text">${esc(state.prompt)}</p>
+          <div class="btn-row">
+            <button class="btn" type="button" data-act="next-prompt">Another prompt</button>
+            <button class="btn btn-primary" type="button" data-act="use-prompt">Use this</button>
+          </div>
+        </div>`}
       </section>
 
       <section class="section">
@@ -853,19 +853,25 @@
       </section>
 
       <section class="section">
-        <p class="eyebrow">Writing sprint</p>
+        <p class="eyebrow">Sprint &amp; goal</p>
         ${sprint ? `<div class="idea-card">
             <span class="sprint-clock" id="sprintClock">${fmtClock(sprint.end - Date.now())}</span>
             <p class="small muted" id="sprintWords">${Math.max(0, wordCount() - sprint.startWords)} words so far. Don’t stop, don’t edit.</p>
             <div class="btn-row"><button class="btn btn-danger" type="button" data-act="stop-sprint">Stop sprint</button></div>
           </div>`
-          : `<p class="small muted">The fastest cure for a blank page: set a timer and write without stopping or deleting. Quality comes later, in the edit.</p>
-          <div class="btn-row">
+          : `<p class="small muted">Set a timer and write without stopping or deleting. Quality comes later, in the edit.</p>
+          <div class="btn-row sprint-row">
             ${[5, 10, 15, 25].map((m) => `<button class="btn" type="button" data-act="sprint" data-min="${m}">${m} min</button>`).join('')}
           </div>`}
         <label class="field" for="goalInput">Word goal
           <input id="goalInput" type="number" min="0" step="50" inputmode="numeric" value="${prefs.goal || ''}" placeholder="e.g. 300">
         </label>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">Your writing</p>
+        <div id="progressBox"></div>
+        <div class="btn-row"><button class="btn" type="button" data-act="habits">See my writing habits</button></div>
       </section>`;
     renderProgress();
   }
@@ -968,7 +974,8 @@
     const vs = (d.versions || []).slice().reverse();
     const points = (d.versions || []).map((v) => v.score).filter((x) => x != null).concat(state.score != null ? [state.score] : []);
     let spark = '';
-    if (points.length >= 2) {
+    // A flat line between two equal scores says nothing, so wait for a change.
+    if (points.length >= 3 || (points.length === 2 && points[0] !== points[1])) {
       const W = 260;
       const H = 48;
       const x = (i) => (i / (points.length - 1)) * (W - 8) + 4;
@@ -1179,11 +1186,12 @@
   function renderWarmups() {
     return `<section class="section">
         <p class="eyebrow">Warm-ups · 3 to 5 minutes</p>
-        <p class="small muted">Quick writing games with one hard rule, checked as you type. A timer starts with each one. Great for getting going before real work.</p>
-        <ul class="drill-list">${WP.warmups.list.map((x) => `<li class="drill">
-          <button type="button" class="drill-open" data-game="${x.id}">
-            <span class="drill-title">${prefs.warmups[x.id] ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)} <span class="small muted">· ${x.minutes} min</span></span>
-            <span class="drill-task">${esc(WP.warmups.rulesText(x, { words: ['three', 'random', 'words'] }))}</span>
+        <p class="small muted">Quick games with one hard rule, checked as you type. Good for getting going before real work.</p>
+        <ul class="game-grid">${WP.warmups.list.map((x) => `<li>
+          <button type="button" class="game-tile ${prefs.warmups[x.id] ? 'done' : ''}" data-game="${x.id}" title="${esc(WP.warmups.rulesText(x, { words: ['three', 'random', 'words'] }))}">
+            <span class="game-title">${prefs.warmups[x.id] ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)}</span>
+            <span class="game-task">${esc(x.short || x.title)}</span>
+            <span class="game-min">${x.minutes} min</span>
           </button>
         </li>`).join('')}</ul>
       </section>`;
@@ -1463,7 +1471,7 @@
     return `<section class="section">
         <p class="eyebrow">Keep your work safe</p>
         <p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>
-        ${used == null ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
+        ${used == null || pct < 25 ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
         <div class="btn-row">
           ${canDownload ? '<button class="btn" type="button" data-act="backup">Download a backup</button>' : ''}
           <label class="btn" for="restoreFile">Restore a backup</label>
@@ -1643,10 +1651,10 @@
           </div>
         </div>
         <p class="small muted">${doc().game ? 'Checked against this warm-up’s rules only. Genre checks come back when you open a normal draft.' : empty ? `Start writing and ${esc(g.name.toLowerCase())} checks will mark your draft as you type.` : `Checked against ${esc(g.name)} rules${frameworkDef() && frameworkDef().structure !== false ? ` and the “${esc(frameworkDef().name)}” framework` : ''}. Hover a highlight to see why.`}</p>
-        ${renderRhythm(state.ctx)}
-        <div class="filters" role="group" aria-label="Show highlights">
-          ${LEVELS.map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
-        </div>
+        ${empty ? '' : `<div class="filters" role="group" aria-label="Show highlights">
+          <span class="filters-label">Highlights</span>
+          ${LEVELS.filter((l) => markCounts[l.id] || !prefs.levels[l.id]).map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
+        </div>`}
         <label class="toggle"><input type="checkbox" id="oneThingToggle" ${prefs.oneThing ? 'checked' : ''}> <span><b>One thing at a time.</b> Show only the most important problem, then the next.</span></label>
         ${prefs.oneThing ? (spot ? `<div class="spotlight-bar"><span>Fix this first: ${esc(spot.title)} <span class="small">(${issuesInOrder(results).findIndex((r) => r.id === spot.id) + 1} of ${issuesInOrder(results).length})</span></span><button class="btn btn-quiet" type="button" data-act="next-thing">Next issue</button></div>` : '<div class="spotlight-bar"><span>Nothing to fix right now. Nice work.</span></div>')
           : spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
@@ -1671,6 +1679,7 @@
             <ul class="waiting-list">${waiting.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ul>
           </details>
         </section>` : ''}
+      ${(() => { const r = empty ? '' : renderRhythm(state.ctx); return r ? `<section class="section">${r}</section>` : ''; })()}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -1776,9 +1785,8 @@
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
                 <button class="btn ${active ? 'btn-primary' : ''}" type="button" data-fw-insert="${fw.id}">${fw.structure === false ? 'Insert line guide' : 'Insert outline'}</button>
                 <button class="btn" type="button" data-fw-study="${fw.id}">Study the example</button>
-                <button class="btn" type="button" data-fw-example="${fw.id}">Open example</button>
+                <button class="btn" type="button" data-fw-example="${fw.id}">Open example as a draft</button>
               </div>
-              <details class="lesson"><summary>Example</summary><pre class="fw-example">${esc(fw.example)}</pre></details>
             </div>` : ''}
           </div>`;
         }).join('')}
@@ -1861,7 +1869,7 @@
         </div>
         <p class="small muted">The checks are rules of thumb, not laws. Professional writers break every one of them, on purpose. Learn the rule first, then decide when to break it.</p>
       </section>
-      <section class="section">
+      <section class="section" id="learnSyntax">
         <p class="eyebrow">How the editor reads your draft</p>
         <ul class="plain-list">
           <li><code>## Heading</code> starts a section or framework beat.</li>
@@ -1878,9 +1886,10 @@
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)} rules</option>`).join('');
-    $('frameworkChip').innerHTML = fw ? `<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : 'Choose a framework';
-    $('frameworkChip').title = 'Open the Frameworks tab';
+    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(SHORT_NAMES[x.id] || x.name)} rules</option>`).join('');
+    const icon = '<svg class="tool-pill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 12h10M5 18.5h6"/></svg>';
+    $('frameworkChip').innerHTML = fw ? `${icon}<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : `${icon}Choose a framework`;
+    $('frameworkChip').title = fw ? `Framework: ${fw.name}. Open the Frameworks tab` : 'Open the Frameworks tab';
   }
 
   function renderStatusLight() {
@@ -1901,8 +1910,13 @@
       $('statTime').innerHTML = `<b>${Math.max(1, Math.round(words / 230))} min</b> read`;
     }
     if (words >= 30 && g.id !== 'poetry') {
-      $('statGrade').innerHTML = `Grade <b>${T.readability(ctx).grade.toFixed(1)}</b>`;
-    } else $('statGrade').textContent = '';
+      const grade = T.readability(ctx).grade;
+      $('statGrade').innerHTML = `Reading grade <b>${grade.toFixed(1)}</b>`;
+      $('statGrade').title = `A US school grade of ${Math.max(1, Math.round(grade))} could read this easily. Most popular writing aims for 6 to 9.`;
+    } else {
+      $('statGrade').textContent = '';
+      $('statGrade').title = '';
+    }
     renderGoal(words);
   }
 
@@ -2194,18 +2208,23 @@
       applyLayout();
     });
     $('themeBtn').addEventListener('click', toggleTheme);
-    $('widthBtn').addEventListener('click', () => {
-      prefs.wide = !prefs.wide;
-      savePrefs();
-      applyLayout();
-      editor.render();
-    });
-    $('frameworkChip').addEventListener('click', () => {
+    const openRight = (tab) => {
       if (window.matchMedia('(max-width: 960px)').matches) $('layout').classList.add('show-right');
       else prefs.showRight = true;
       prefs.focus = false;
-      setTab('right', 'frameworks');
+      setTab('right', tab);
       applyLayout();
+    };
+    $('frameworkChip').addEventListener('click', () => openRight('frameworks'));
+    $('syntaxHelp').addEventListener('click', () => {
+      openRight('learn');
+      const sec = $('learnSyntax');
+      if (sec) {
+        sec.scrollIntoView({ block: 'start' });
+        sec.classList.remove('flash');
+        void sec.offsetWidth;
+        sec.classList.add('flash');
+      }
     });
     $('scrim').addEventListener('click', () => {
       $('layout').classList.remove('show-left', 'show-right');
@@ -2246,6 +2265,13 @@
     $('modalBody').addEventListener('change', (e) => {
       const m = e.target.name && e.target.name.match(/^disp-(\w+)$/);
       if (!m) return;
+      if (m[1] === 'width') {
+        prefs.wide = e.target.value === 'wide';
+        savePrefs();
+        applyLayout();
+        editor.render();
+        return;
+      }
       prefs.display = Object.assign({ size: 'm', spacing: 'normal', font: 'serif' }, prefs.display, { [m[1]]: e.target.value });
       savePrefs();
       applyDisplay();
@@ -2463,7 +2489,10 @@
         const options = g.prompts.filter((p) => p !== state.prompt);
         state.prompt = pick(options);
       } else if (act === 'use-prompt') useStarter('Prompt: ' + state.prompt);
-      else if (act === 'shuffle-idea') state.idea = buildIdea(g);
+      else if (act === 'idea-mode') {
+        prefs.ideaMode = b.dataset.mode;
+        savePrefs();
+      } else if (act === 'shuffle-idea') state.idea = buildIdea(g);
       else if (act === 'use-idea') useStarter('Idea: ' + ideaText(g, state.idea, false));
       else if (act === 'nudge') {
         const options = g.nudges.filter((n) => n !== state.nudge);
