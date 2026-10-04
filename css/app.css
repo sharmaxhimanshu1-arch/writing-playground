@@ -1238,6 +1238,9 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   border-bottom: 1px solid var(--line);
 }
 .tool-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
+/* The rules + framework group gives way first: the framework name truncates before the icons wrap. */
+.tool-group:first-child { flex: 1 1 0; flex-wrap: nowrap; min-width: min(100%, 230px); }
+.tool-group:first-child .tool-pill { min-width: 0; flex: 0 1 auto; }
 .tool-select {
   appearance: none;
   -webkit-appearance: none;
@@ -1395,3 +1398,29 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .self-edit label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); cursor: pointer; font-size: var(--text-sm); }
 .self-edit input { margin-top: 3px; accent-color: var(--accent); flex: none; }
 .self-edit input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+
+/* Score change after an edit */
+.score-num { position: relative; }
+.score-delta {
+  position: absolute; right: -6px; top: -8px;
+  font-family: var(--font-ui); font-size: var(--text-xs); font-weight: 700; line-height: 1;
+  padding: 3px 6px; border-radius: 999px; white-space: nowrap;
+  animation: delta-in 2.4s ease-out forwards;
+}
+.score-delta.up { color: var(--good); background: var(--good-tint); }
+.score-delta.down { color: var(--bad); background: var(--bad-tint); }
+@keyframes delta-in { 0% { opacity: 0; transform: translateY(4px); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .score-delta { animation: none; } }
+
+/* Print the clean preview only */
+@media print {
+  body.print-preview { background: #fff; color: #000; }
+  body.print-preview .topbar, body.print-preview .layout, body.print-preview .statusbar,
+  body.print-preview .toast, body.print-preview .tooltip, body.print-preview .fix-card, body.print-preview .tour,
+  body.print-preview .modal-head, body.print-preview .modal-body > .btn-row, body.print-preview .preview > .small { display: none !important; }
+  body.print-preview .app { display: block; height: auto; }
+  body.print-preview .modal { position: static; background: none; padding: 0; display: block; }
+  body.print-preview .modal-card { box-shadow: none; border: 0; max-width: none; max-height: none; overflow: visible; background: none; }
+  body.print-preview .modal-body { overflow: visible; padding: 0; }
+  body.print-preview .preview { color: #000; font-size: 12pt; }
+}
