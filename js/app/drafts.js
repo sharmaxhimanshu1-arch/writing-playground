@@ -38,7 +38,7 @@
     if (last && last.text === d.text) return false;
     const ctx = T.parse(d.text, { framework: d.framework, genre: d.genre });
     ctx.frameworkDef = genreById(d.genre).frameworks.find((f) => f.id === d.framework) || null;
-    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx).score;
+    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx, { ignore: A.ignoredIn(d) }).score;
     d.versions.push({ at: Date.now(), text: d.text, words: ctx.wordCount, score, label: label || '' });
     if (d.versions.length > MAX_VERSIONS) d.versions.splice(0, d.versions.length - MAX_VERSIONS);
     persist();

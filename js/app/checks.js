@@ -35,7 +35,7 @@
     const muted = new Set(prefs.muted[g.id] || []);
     const checks = game ? gameChecks : g.checks.filter((c) => !muted.has(c.id));
     const force = (d.drill ? [d.drill.rule] : []).concat(gameChecks.map((c) => c.id));
-    const { results, score } = WP.checks.run(checks, ctx, { force });
+    const { results, score } = WP.checks.run(checks, ctx, { force, ignore: A.ignoredIn(d) });
     // Show how an edit moved the score, but not when opening a draft or switching genre.
     const same = state.scoreKey === d.id + ':' + g.id + ':' + (d.framework || '');
     state.scoreDelta = same && state.score != null && score != null && score !== state.score ? { v: score - state.score, at: Date.now() } : state.scoreDelta;
@@ -191,6 +191,7 @@
           </details>
         </section>` : ''}
       ${(() => { const r = empty ? '' : renderRhythm(state.ctx); return r ? `<section class="section">${r}</section>` : ''; })()}
+      ${renderIgnored()}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -208,6 +209,19 @@
 
   function needsCount(results) {
     return results.filter((r) => r.status === 'fail' || r.status === 'warn').length;
+  }
+
+  /** Highlights dismissed as intentional in this draft, each with a way back. */
+  function renderIgnored() {
+    const d = doc();
+    const list = A.ignoredIn(d);
+    if (!list.length) return '';
+    return `<section class="section">
+        <details class="fold" data-fold="ignored">
+          <summary><span class="badge badge-na">Intentional</span> ${list.length} ${list.length === 1 ? 'highlight' : 'highlights'} you kept on purpose</summary>
+          <ul class="muted-list">${list.map((x, i) => `<li><span><b>${esc(x.title || x.check)}</b> <span class="small muted">“${esc(x.text.length > 50 ? x.text.slice(0, 48) + '…' : x.text)}”</span></span><button class="btn btn-small" type="button" data-unignore="${i}">Check it again</button></li>`).join('')}</ul>
+        </details>
+      </section>`;
   }
 
   function renderMuted() {
@@ -258,7 +272,7 @@
               <span class="hit-text">${esc(snippet(text, m))}</span>
               <span class="hit-note">${esc(A.noteText(m))}</span>
             </button>
-            ${m.fixes ? `<span class="hit-fixes">${m.fixes.map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}</span>` : ''}
+            ${m.fixes || A.canIgnore(m) ? `<span class="hit-fixes">${(m.fixes || []).map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}${A.canIgnore(m) ? `<button type="button" class="btn btn-quiet btn-small" data-ignore="${m.idx}" title="Stop flagging these words for this rule, in this draft only">Intentional</button>` : ''}</span>` : ''}
           </li>`).join('')}</ul>
           ${list.length > 14 ? `<p class="small muted">+ ${list.length - 14} more highlighted in the draft.</p>` : ''}` : ''}
       </div>` : ''}

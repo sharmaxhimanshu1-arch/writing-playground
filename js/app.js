@@ -164,6 +164,7 @@
       const b = e.target.closest('button');
       if (!b) return;
       if (b.hasAttribute('data-card-close')) return A.hideFixCard();
+      if (b.hasAttribute('data-card-ignore') && state.fixMark) return A.ignoreMark(state.fixMark);
       if (b.hasAttribute('data-card-next')) return A.nextIssueCard();
       if (b.hasAttribute('data-card-coach') && state.fixMark) return askCoachAbout(state.fixMark);
       if (b.dataset.cardFix && state.fixMark) A.applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
@@ -510,6 +511,14 @@
         if (r) A.applyAll(r.marks.filter((m) => m.fixes && m.fixes.length));
         return;
       }
+      const ig = e.target.closest('[data-ignore]');
+      if (ig) {
+        const m = state.allMarks[Number(ig.dataset.ignore)];
+        if (m) A.ignoreMark(m);
+        return;
+      }
+      const ug = e.target.closest('[data-unignore]');
+      if (ug) return A.unignore(Number(ug.dataset.unignore));
       const hit = e.target.closest('[data-hit]');
       if (hit) {
         const [s, en] = hit.dataset.hit.split(':').map(Number);

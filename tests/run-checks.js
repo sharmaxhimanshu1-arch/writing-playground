@@ -95,6 +95,29 @@ for (const game of WP.warmups.list) {
   if (!ok) { failures++; origError('Warm-up check misbehaves:', game.id); }
 }
 
+// Marking highlights as intentional: all of a check's flagged spots dismissed means the rule counts as followed.
+{
+  const story = WP.genres.find((g) => g.id === 'story');
+  const text = story.sample.text;
+  const ctx = () => Object.assign(WP.text.parse(text, { framework: story.sample.framework, genre: 'story' }), { frameworkDef: story.frameworks.find((f) => f.id === story.sample.framework) });
+  const plain = WP.checks.run(story.checks, ctx());
+  const issueWords = (r) => [...new Set(r.marks.filter((m) => m.level === 'warn' || m.level === 'bad').map((m) => text.slice(m.start, m.end)))];
+  // The flagged rule with the most distinct flagged spots, so both cases below get exercised.
+  const target = plain.results.filter((r) => (r.status === 'warn' || r.status === 'fail') && issueWords(r).length).sort((a, b) => issueWords(b).length - issueWords(a).length)[0];
+  const words = issueWords(target);
+  const all = WP.checks.run(story.checks, ctx(), { ignore: words.map((w) => ({ check: target.id, text: w })) });
+  const after = all.results.find((r) => r.id === target.id);
+  const okAll = after.status === 'pass' && !after.marks.some((m) => m.level === 'warn' || m.level === 'bad') && all.score > plain.score;
+  console.log(`intentional (all of "${target.title}"): ${okAll ? 'ok' : 'WRONG'} (${target.status} → ${after.status}, score ${plain.score} → ${all.score})`);
+  if (!okAll) { failures++; origError('Ignoring every flagged spot should make the check pass and raise the score.'); }
+  if (words.length > 1) {
+    const some = WP.checks.run(story.checks, ctx(), { ignore: [{ check: target.id, text: words[0].toUpperCase() }] }).results.find((r) => r.id === target.id);
+    const okSome = some.status === target.status && some.ignored >= 1 && /marked as intentional/.test(some.summary);
+    console.log(`intentional (one of several, any case): ${okSome ? 'ok' : 'WRONG'}`);
+    if (!okSome) { failures++; origError('Ignoring one spot should drop only it and keep the status.'); }
+  }
+}
+
 console.log('\nSyllables:', ['haiku', 'beautiful', 'radiator', 'window', 'table', 'wanted', 'jumped', 'the', 'fire'].map((w) => w + '=' + WP.text.syllables(w)).join(' '));
 console.log('Rhymes:', [['night', 'light'], ['bay', 'away'], ['town', 'down'], ['sleeve', 'leave'], ['loaf', 'froze'], ['me', 'see'], ['time', 'rhyme'], ['cat', 'dog']].map(([a, b]) => `${a}/${b}=${WP.poetry.rhymes(a, b)}`).join(' '));
 

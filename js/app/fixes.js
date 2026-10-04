@@ -5,7 +5,7 @@
   'use strict';
 
   const A = WP.app;
-  const { $, editor, esc, levelRank, prefs, state, toast } = A;
+  const { $, doc, editor, esc, levelRank, persist, prefs, state, toast } = A;
 
   /* ---------- fixes ---------- */
 
@@ -73,6 +73,45 @@
     openFixCard(m);
   }
 
+  function canIgnore(m) {
+    const d = doc();
+    return (m.level === 'warn' || m.level === 'bad') && !d.drill && !d.game;
+  }
+
+  /** Marks a highlight's words as intentional for its rule in this draft; the check reruns without them. */
+  function ignoreMark(m) {
+    const d = doc();
+    const text = d.text.slice(m.start, m.end).replace(/\s+/g, ' ').trim();
+    if (!text || !canIgnore(m)) return;
+    const key = WP.checks.ignoreKey(m.checkId, text);
+    d.ignored = (d.ignored || []).filter((x) => WP.checks.ignoreKey(x.check, x.text) !== key);
+    d.ignored.push({ check: m.checkId, title: m.checkTitle, text });
+    d.updated = Date.now();
+    persist(true);
+    const next = state.fixMark === m ? visibleIssues().find((x) => x.start > m.start && x !== m) : null;
+    hideFixCard();
+    A.analyze();
+    const short = text.length > 40 ? text.slice(0, 38) + '…' : text;
+    toast(`“${short}” won’t be flagged for ${m.checkTitle} in this draft. Undo it at the bottom of Checks.`);
+    if (next) {
+      const again = visibleIssues().find((x) => x.start >= next.start);
+      if (again) {
+        editor.reveal(again.start, again.end);
+        openFixCard(again);
+      }
+    }
+  }
+
+  function unignore(i) {
+    const d = doc();
+    if (!d.ignored || !d.ignored[i]) return;
+    const x = d.ignored.splice(i, 1)[0];
+    d.updated = Date.now();
+    persist(true);
+    A.analyze();
+    toast(`“${x.text}” is checked for ${x.title} again.`);
+  }
+
   /** Issues the reader can currently see, in document order. */
   function visibleIssues() {
     return state.allMarks
@@ -92,6 +131,7 @@
         ${(m.fixes || []).map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
         ${WP.coach.isReady() ? '<button class="btn" type="button" data-card-coach>Ask the coach</button>' : ''}
         ${others ? '<button class="btn" type="button" data-card-next title="Next issue (Ctrl/⌘ + .)">Next issue ›</button>' : ''}
+        ${canIgnore(m) ? '<button class="btn btn-quiet" type="button" data-card-ignore title="Stop flagging these words for this rule, in this draft only">It’s intentional</button>' : ''}
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
@@ -149,6 +189,6 @@
 
   Object.assign(A, {
     fixEdit, applyFix, applyAll, showFixCard, visibleIssues, openFixCard, nextIssueCard, noteText,
-    placeFixCard, hideFixCard
+    placeFixCard, hideFixCard, canIgnore, ignoreMark, unignore
   });
 })(window.WP = window.WP || {});
