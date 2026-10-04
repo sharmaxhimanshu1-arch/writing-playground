@@ -1186,3 +1186,40 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .storage { display: flex; flex-direction: column; gap: 6px; }
 .storage-track { width: 100%; }
 .goal-fill.warn { background: var(--warn); }
+
+/* ---------- Plan ---------- */
+
+.plan { border: 1px solid var(--accent); border-radius: var(--radius); background: var(--raised); padding: 10px 12px; }
+.plan summary { cursor: pointer; font-size: var(--text-sm); }
+.plan[open] summary { margin-bottom: 8px; }
+.plan > p { margin-bottom: 10px; }
+.plan-fields { display: flex; flex-direction: column; gap: 10px; }
+.plan-field { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); }
+.plan-field textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  padding: 6px 8px;
+  font-family: var(--font-editor);
+  font-size: 0.95rem;
+}
+
+/* ---------- Habits, improved, preview ---------- */
+
+.habits { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; }
+.habits li { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.habits p { margin: 0; }
+.lean { display: flex; flex-wrap: wrap; gap: 6px; }
+.lean .chip b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+.improved { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: var(--text-sm); }
+.improved.fixed li::marker { color: var(--good); }
+.improved.worse li::marker { color: var(--bad); }
+.improved.still li::marker { color: var(--warn); }
+.preview { font-family: var(--font-editor); font-size: 1.0625rem; line-height: 1.7; display: flex; flex-direction: column; gap: 12px; max-width: 40rem; }
+.preview h2 { font-size: 1.75rem; margin: 0; line-height: 1.2; }
+.preview h3 { font-size: 1.2rem; margin: 8px 0 0; }
+.preview p { margin: 0; white-space: pre-wrap; }
+.preview .small { font-family: var(--font-ui); }
+.preview-cue { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--info); }

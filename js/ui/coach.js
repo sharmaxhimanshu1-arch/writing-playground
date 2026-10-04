@@ -63,6 +63,12 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
     });
   }
 
+  function planText(d, g) {
+    const qs = (WP.plans && WP.plans[g.id]) || [];
+    const lines = qs.filter((q) => d.plan && (d.plan[q.id] || '').trim()).map((q) => `${q.q}: ${d.plan[q.id].trim()}`);
+    return lines.length ? '\n' + lines.join('\n') : 'not filled in';
+  }
+
   function context(limit) {
     const d = app.doc();
     const g = app.genre();
@@ -74,6 +80,7 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
     return `GENRE: ${g.name} (${g.tagline})
 FRAMEWORK: ${fw ? `${fw.name}. Beats: ${fw.beats.map((b) => b.name).join(' → ')}` : 'none chosen'}
 TITLE: ${d.title || 'Untitled'}
+WRITER'S PLAN: ${planText(d, g)}
 RULE CHECKS THAT FLAGGED SOMETHING:
 ${flagged || '- none'}
 
