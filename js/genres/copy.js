@@ -2,7 +2,7 @@
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band, per100 } = WP.checks;
+  const { C, mark, plural, quote, per100 } = WP.checks;
 
   const BENEFIT = ['so you can', 'which means', 'so that', 'without', 'save', 'saves', 'in just', 'in under',
     'in minutes', 'never again', 'no more', 'stop', 'finally', 'imagine', 'get more', 'spend less', 'feel',

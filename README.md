@@ -79,7 +79,17 @@ js/genres/warmups.js  timed warm-up games with live constraint checks
 js/genres/plans.js    "Plan this piece" questions for each genre
 js/ui/editor.js       highlighting editor (transparent textarea over a rendered backdrop)
 js/ui/coach.js        AI coach (uses the Claude artifact runtime when available)
-js/app.js             panels, drafts, prompts, sprints, wiring
+js/app/core.js        shared state on WP.app: storage, preferences, drafts, the editor, helpers
+js/app/layout.js      genre menu, panels and icon rails, theme, tour, status bar
+js/app/checks.js      running the checks; the Checks panel and sentence rhythm
+js/app/fixes.js       one-click fixes and the fix card
+js/app/ideas.js       Ideas panel, sprints, progress, blank-page starter
+js/app/practice.js    learning path, drills, warm-ups
+js/app/drafts.js      drafts list, versions, import, export, backup and restore
+js/app/frameworks.js  plan this piece, outline, frameworks and study view
+js/app/learn.js       Learn panel, writing habits, What improved?
+js/app/tools.js       Preview and print, Display, shortcuts, Listen
+js/app.js             events, the coach bridge, and boot
 scripts/build.js      bundles everything into dist/*.html
 tests/run-checks.js   runs every genre's checks against its examples
 tests/e2e/            browser tests (Playwright) and their runner
@@ -90,18 +100,21 @@ tests/e2e/            browser tests (Playwright) and their runner
 ```bash
 npm install                      # once: installs Playwright for the browser tests
 npx playwright install chromium  # once: the browser it drives
+npm run lint                     # ESLint: undefined names and leftovers across the script files
 npm test                         # rule checks: samples, framework examples, drills and warm-ups
 npm run build                    # rebuild dist/ after changing anything
 npm run e2e                      # browser tests: click through the real page in Chromium
 npm run e2e -- starter           # only the browser tests whose file name contains "starter"
 ```
 
+App code in `js/app/*.js` shares one object, `WP.app` (called `A` in each file). Each file adds its functions with `Object.assign(A, {…})` at the end and calls other files' functions as `A.name()`. Names from `core.js` are unpacked at the top of each file. Load order is set by the script tags in `index.html`: core first, `js/app.js` last.
+
 Browser tests live in `tests/e2e/*.test.js`. Each file exports `async (t) => {…}`; `t.page()` opens a fresh browser profile, `t.ok()` / `t.eq()` record checks, and any error thrown on the page fails the file. Screenshots go to `tests/e2e/output/`.
 
-Every pull request runs `npm test`, checks that `dist/` was rebuilt, and runs the browser tests (`.github/workflows/ci.yml`). If a browser test fails there, its screenshots are attached to the run.
+Every pull request runs the lint and `npm test`, checks that `dist/` was rebuilt, and runs the browser tests (`.github/workflows/ci.yml`). If a browser test fails there, its screenshots are attached to the run.
 
 ### Adding a genre
 
-Create `js/genres/<name>.js` that calls `WP.genres.push({...})` with `id`, `name`, `tagline`, `checks`, `frameworks`, `prompts`, `generator`, `nudges`, `guide` and `sample` (copy an existing genre file as a template). Then add a `<script>` tag for it in `index.html`, inside the `SCRIPTS` markers, and add the file to the list in `tests/run-checks.js`.
+Create `js/genres/<name>.js` that calls `WP.genres.push({...})` with `id`, `name`, `tagline`, `checks`, `frameworks`, `prompts`, `generator`, `nudges`, `guide` and `sample` (copy an existing genre file as a template). Then add a `<script>` tag for it in `index.html`, inside the `SCRIPTS` markers and before `js/app/core.js`, and add the file to the list in `tests/run-checks.js`.
 
 A check is an object with `id`, `title`, `group`, `why` and a `run(ctx)` function that returns `{ status, summary, marks }`. A mark can carry `fixes: [{ label, text }]`; an empty `text` deletes the marked words and the app tidies the spacing and capitals around them. The helpers in `js/core/checks.js` (`C.phrases`, `C.filler`, `C.longSentences`…) cover most cases.

@@ -2,7 +2,7 @@
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band, DELETE } = WP.checks;
+  const { C, mark, plural, quote, band } = WP.checks;
 
   const WPM = 150; // typical YouTube narration pace
 

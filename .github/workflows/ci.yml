@@ -19,6 +19,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint (undefined names, unused code)
+        run: npm run lint
+
       - name: Rule checks (samples, framework examples, drills, warm-ups)
         run: npm test
 
