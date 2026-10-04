@@ -233,6 +233,15 @@
     return new RegExp('(?<![\\p{L}\\p{N}\'’])(?:' + parts.join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
   }
 
+  /** Like phraseRegex, but single words also match -s, -es, -ed, -d and -ing forms. */
+  function formsRegex(list) {
+    const parts = list
+      .slice()
+      .sort((a, b) => b.length - a.length)
+      .map((p) => escapeRe(p).replace(/\s+/g, '\\s+').replace(/'/g, "['’]") + (/\s/.test(p) ? '' : '(?:s|es|ed|d|ing)?'));
+    return new RegExp('(?<![\\p{L}\\p{N}\'’])(?:' + parts.join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+  }
+
   /** All matches of a regex in the prose (masked) text. */
   function findAll(ctx, re, range) {
     const out = [];
@@ -287,6 +296,7 @@
     syllables,
     readability,
     phraseRegex,
+    formsRegex,
     findAll,
     sentenceAt,
     proseLines,

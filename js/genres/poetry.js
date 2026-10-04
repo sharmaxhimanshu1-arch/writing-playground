@@ -223,7 +223,7 @@
       run(ctx) {
         const abstract = T.findAll(ctx, T.phraseRegex(lex.abstractWords));
         const concrete = [];
-        for (const words of Object.values(lex.senses)) concrete.push(...T.findAll(ctx, T.phraseRegex(words)));
+        for (const words of Object.values(lex.senses)) concrete.push(...T.findAll(ctx, T.formsRegex(words)));
         const marks = abstract.map((h) => mark(h, 'warn', `${quote(h.text)} is abstract. What image could stand in for it?`))
           .concat(concrete.map((h) => mark(h, 'good', `Concrete, sensory: ${quote(h.text)}.`)));
         return {

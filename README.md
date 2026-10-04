@@ -17,10 +17,10 @@ Drafts are saved automatically in your browser's local storage. To keep a copy e
 | --- | --- |
 | **Genre tabs** (top) | Comedy, Video Script, Short Story, Essay & Blog, Poetry, Copywriting, Speech, Screenplay. Each genre has its own drafts, frameworks, prompts, lessons and checks. |
 | **Ideas** (left) | Your daily word count and streak (with a 14-day chart), a new challenge every day for each genre (a prompt, a framework and a word target), a prompt generator, an *idea builder* where you click any part to swap it, "stuck?" questions that push a draft forward, timed writing sprints, and a word goal. |
-| **Practice** (left) | 32 short drills, four per genre, each training one rule. A drill opens a flawed passage with its check turned on. Fix it until the check turns green, then compare with a model answer. |
+| **Practice** (left) | **Your path**: six steps per genre (read the basics, four drills, then a full piece that scores 75+), with a level that grows as you go. **Drills**: 32 short exercises, four per genre, each training one rule; fix a flawed passage until its check turns green, then compare with a model answer. **Warm-ups**: eight 3–5 minute games with one hard rule checked live (six-word story, fifty-word story, no letter E, three random words, ABC sentences, no crutch words, five senses, dialogue only). |
 | **Drafts** (left) | All your drafts, plus the history of the current one: versions saved automatically every 10 minutes (or whenever you click **Save a version now**), a chart of how the score changed, a word-by-word **Compare** with today's text, and **Restore**. |
 | **The page** (center) | A distraction-free editor. Click a highlight to see why it's marked, get a one-click fix where one exists (delete a filler word, "said angrily" → "said", "utilize" → "use"). **Listen** reads the draft (or your selection) aloud, so you can hear a joke's timing or a script's rhythm. Use **Wide page** for more room or **Focus** to hide both panels. |
-| **Checks** (right) | Your draft score, each rule's status (Following / Improve / Breaking / Tip), and why the rule exists. Click a check to show only its highlights, click an item to jump to it, or fix every occurrence at once. |
+| **Checks** (right) | Your draft score, each rule's status (Following / Improve / Breaking / Tip), and why the rule exists. Click a check to show only its highlights, click an item to jump to it, or fix every occurrence at once. Feeling overwhelmed? Tick **One thing at a time** to see only the most important problem, then the next. Any check you find unhelpful can be turned off per genre. |
 | **Coach** (right) | An AI writing coach powered by Claude: **Review my draft** (strengths, the fixes that matter most, and a rewrite you can drop in for each), **Rewrite a passage** (select text, pick a goal like "Sharpen the punchline", get three versions), **Brainstorm** (five ideas with first lines), and **Ask the coach** questions about your draft. You can also click any highlight and choose **Ask the coach** to have it explained. It runs when the playground is opened as a Claude artifact and uses the viewer's own Claude account. |
 | **Frameworks** (right) | Proven structures for the genre, each with step-by-step beats, a worked example, and an **Insert outline** button. Once inserted, the checker tracks which beats you have written. |
 | **Learn** (right) | Core principles, common beginner mistakes, and a glossary for the genre. |
@@ -69,6 +69,7 @@ js/core/checks.js     check framework and checks shared by all genres
 js/core/diff.js       word-level diff used to compare draft versions
 js/genres/*.js        one file per genre: checks, frameworks, lessons, prompts, example draft
 js/genres/drills.js   practice drills for every genre
+js/genres/warmups.js  timed warm-up games with live constraint checks
 js/ui/editor.js       highlighting editor (transparent textarea over a rendered backdrop)
 js/ui/coach.js        AI coach (uses the Claude artifact runtime when available)
 js/app.js             panels, drafts, prompts, sprints, wiring
@@ -79,7 +80,7 @@ tests/run-checks.js   runs every genre's checks against its examples
 ## Development
 
 ```bash
-npm test         # run all checks against the sample drafts, framework examples and drills
+npm test         # run all checks against samples, framework examples, drills and warm-ups
 npm run build    # rebuild dist/writing-playground.html after changing anything
 ```
 

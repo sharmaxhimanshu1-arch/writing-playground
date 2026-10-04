@@ -54,6 +54,11 @@
     drillsDone: [],
     challenges: {},
     toured: false,
+    muted: {},
+    oneThing: false,
+    learned: {},
+    pieces: {},
+    warmups: {},
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
 
@@ -185,7 +190,12 @@
     const g = genre();
     const ctx = T.parse(d.text, { framework: d.framework, genre: g.id });
     ctx.frameworkDef = frameworkDef();
-    const { results, score } = WP.checks.run(g.checks, ctx, { force: d.drill ? [d.drill.rule] : [] });
+    const game = d.game && WP.warmups.get(d.game.id);
+    const gameChecks = game ? game.checks(d.game.params || {}) : [];
+    const muted = new Set(prefs.muted[g.id] || []);
+    const checks = game ? gameChecks : g.checks.filter((c) => !muted.has(c.id));
+    const force = (d.drill ? [d.drill.rule] : []).concat(gameChecks.map((c) => c.id));
+    const { results, score } = WP.checks.run(checks, ctx, { force });
     state.ctx = ctx;
     state.results = results;
     state.score = score;
@@ -196,6 +206,9 @@
     trackWords(d.id, ctx.wordCount);
     checkDrill(d, results);
     checkChallenge(d, ctx.wordCount);
+    checkGame(d, results);
+    checkPiece(d, score, ctx.wordCount);
+    if (prefs.oneThing) pickOneThing(results);
     autoVersion(d, score, ctx.wordCount);
     renderChecks();
     renderStatus();
@@ -281,10 +294,22 @@
 
   /* ---------- top bar ---------- */
 
+  const SHORT_NAMES = { video: 'Video', story: 'Story', essay: 'Essay', copy: 'Copy' };
+
   function renderGenreTabs() {
     const g = genre();
     $('genreTabs').innerHTML = WP.genres.map((x) => `
-      <button type="button" class="genre-tab" data-genre="${x.id}" aria-pressed="${x.id === g.id}" title="${esc(x.tagline)}">${esc(x.name)}</button>`).join('');
+      <button type="button" class="genre-tab" data-genre="${x.id}" aria-pressed="${x.id === g.id}" title="${esc(x.name)}: ${esc(x.tagline)}">${esc(SHORT_NAMES[x.id] || x.name)}</button>`).join('');
+    $('genreSelect').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+    fitTopbar();
+  }
+
+  /** Swaps the genre tabs for a dropdown when they don't fit. */
+  function fitTopbar() {
+    const bar = document.querySelector('.topbar');
+    bar.classList.remove('compact');
+    const tabs = $('genreTabs');
+    if (tabs.scrollWidth > tabs.clientWidth + 2) bar.classList.add('compact');
   }
 
   /** Genre tabs open that genre's workspace: its latest draft, or an example on first visit. */
@@ -717,6 +742,143 @@
     return (WP.drills && WP.drills[g.id]) || [];
   }
 
+  /* ---------- learning path ---------- */
+
+  const pieceWords = (g) => (g.id === 'poetry' ? 40 : g.id === 'comedy' ? 100 : 150);
+  const LEVEL_NAMES = ['Just starting', 'Learning', 'Learning', 'Practicing', 'Practicing', 'Almost there', 'Confident'];
+
+  function pathSteps(g) {
+    const done = new Set(prefs.drillsDone);
+    return [
+      { kind: 'learn', title: 'Read the basics', detail: 'Open the Learn tab and read the core principles and common mistakes.', done: !!prefs.learned[g.id] },
+      ...drillsFor(g).map((x) => ({ kind: 'drill', id: x.id, title: `Drill: ${x.title}`, detail: x.task, done: done.has(x.id) })),
+      { kind: 'piece', title: 'Write a full piece', detail: `A ${g.name.toLowerCase()} draft of at least ${pieceWords(g)} words that scores 75 or more.`, done: !!prefs.pieces[g.id] },
+    ];
+  }
+
+  function renderPath(g) {
+    const steps = pathSteps(g);
+    const n = steps.filter((x) => x.done).length;
+    const next = steps.find((x) => !x.done);
+    const level = LEVEL_NAMES[Math.min(LEVEL_NAMES.length - 1, Math.round((n / steps.length) * (LEVEL_NAMES.length - 1)))];
+    return `<section class="section">
+        <p class="eyebrow">Your path in ${esc(g.name)}</p>
+        <div class="path-head"><span class="path-level">${esc(level)}</span><span class="small muted">${n} of ${steps.length} steps</span></div>
+        <div class="path-bar" aria-hidden="true">${steps.map((x) => `<span class="${x.done ? 'done' : x === next ? 'next' : ''}"></span>`).join('')}</div>
+        <ol class="path-steps">${steps.map((x, i) => `<li class="${x.done ? 'done' : x === next ? 'next' : ''}">
+          <span class="path-num" aria-hidden="true">${x.done ? '✓' : i + 1}</span>
+          <span class="path-text"><b>${esc(x.title)}</b>${x === next ? `<span class="small muted">${esc(x.detail)}</span>` : ''}</span>
+          ${x === next ? `<button class="btn btn-primary btn-small" type="button" data-path="${i}">${x.kind === 'learn' ? 'Open Learn' : x.kind === 'drill' ? 'Start' : 'Start a draft'}</button>` : ''}
+        </li>`).join('')}</ol>
+        ${!next ? '<p class="small">Path complete. Keep the habit with today’s challenge, or try another genre.</p>' : ''}
+      </section>`;
+  }
+
+  function runPathStep(i) {
+    const g = genre();
+    const step = pathSteps(g)[i];
+    if (!step) return;
+    if (step.kind === 'learn') {
+      if (window.matchMedia('(max-width: 960px)').matches) {
+        $('layout').classList.remove('show-left');
+        $('layout').classList.add('show-right');
+      } else prefs.showRight = true;
+      prefs.focus = false;
+      setTab('right', 'learn');
+      applyLayout();
+    } else if (step.kind === 'drill') startDrill(step.id);
+    else {
+      const d = newDoc(g.id, { title: `My first ${g.name.toLowerCase()} piece` });
+      openDoc(d.id);
+      closeDrawers();
+      insertOutline(g.frameworks[0].id);
+    }
+  }
+
+  function checkPiece(d, score, words) {
+    const g = genreById(d.genre);
+    if (prefs.pieces[g.id] || d.sample || d.drill || d.game || d.example) return;
+    if (score == null || score < 75 || words < pieceWords(g)) return;
+    prefs.pieces[g.id] = true;
+    savePrefs();
+    toast(`Path step complete: a full ${g.name.toLowerCase()} piece scoring ${score}.`);
+    if (prefs.leftTab === 'practice') renderPractice();
+  }
+
+  /* ---------- warm-up games ---------- */
+
+  function renderWarmups() {
+    return `<section class="section">
+        <p class="eyebrow">Warm-ups · 3 to 5 minutes</p>
+        <p class="small muted">Quick writing games with one hard rule, checked as you type. A timer starts with each one. Great for getting going before real work.</p>
+        <ul class="drill-list">${WP.warmups.list.map((x) => `<li class="drill">
+          <button type="button" class="drill-open" data-game="${x.id}">
+            <span class="drill-title">${prefs.warmups[x.id] ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)} <span class="small muted">· ${x.minutes} min</span></span>
+            <span class="drill-task">${esc(WP.warmups.rulesText(x, { words: ['three', 'random', 'words'] }))}</span>
+          </button>
+        </li>`).join('')}</ul>
+      </section>`;
+  }
+
+  function startGame(id) {
+    const game = WP.warmups.get(id);
+    if (!game) return;
+    const g = genre();
+    const params = game.setup ? game.setup() : {};
+    const d = newDoc(g.id, {
+      title: `Warm-up: ${game.title}`,
+      text: `> Warm-up: ${WP.warmups.rulesText(game, params)}\n> Tip: ${game.tip}\n\n`,
+      game: { id, params },
+    });
+    persist(true);
+    openDoc(d.id);
+    closeDrawers();
+    prefs.rightTab = 'checks';
+    renderTabs();
+    const ta = $('editor');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+    startSprint(game.minutes);
+    $('pane-practice').scrollTop = 0;
+  }
+
+  function checkGame(d, results) {
+    if (!d.game || d.game.done) return;
+    const game = WP.warmups.get(d.game.id);
+    if (!game || !results.length || !results.every((r) => r.status === 'pass')) return;
+    d.game.done = true;
+    prefs.warmups[game.id] = (prefs.warmups[game.id] || 0) + 1;
+    savePrefs();
+    persist();
+    toast(`Warm-up complete: ${game.title}. Your brain is warm. Time for the real thing.`);
+  }
+
+  /* ---------- one thing at a time ---------- */
+
+  function issuesInOrder(results) {
+    const order = { fail: 0, warn: 1 };
+    return results.filter((r) => r.status in order && r.marks.some((m) => m.level === 'bad' || m.level === 'warn'))
+      .sort((a, b) => order[a.status] - order[b.status]);
+  }
+
+  function pickOneThing(results) {
+    const issues = issuesInOrder(results);
+    if (!issues.some((r) => r.id === state.spotlight)) state.spotlight = issues.length ? issues[0].id : null;
+    if (state.spotlight) state.expanded.add(state.spotlight);
+    editor.setFilters(prefs.levels, state.spotlight);
+  }
+
+  function nextOneThing() {
+    const issues = issuesInOrder(state.results);
+    if (!issues.length) return;
+    const i = issues.findIndex((r) => r.id === state.spotlight);
+    if (state.spotlight) state.expanded.delete(state.spotlight);
+    state.spotlight = issues[(i + 1) % issues.length].id;
+    state.expanded.add(state.spotlight);
+    applyFilters();
+    renderChecks();
+  }
+
   function renderPractice() {
     const g = genre();
     const d = doc();
@@ -725,7 +887,18 @@
     const current = d.drill && drills.find((x) => x.id === d.drill.id);
     const result = current && state.results.find((r) => r.id === current.rule);
     const doneCount = drills.filter((x) => done.has(x.id)).length;
+    const game = d.game && WP.warmups.get(d.game.id);
     $('pane-practice').innerHTML = `
+      ${game ? `<section class="section">
+        <p class="eyebrow">Current warm-up</p>
+        <div class="idea-card drill-current ${d.game.done ? 'challenge done' : ''}">
+          <h3>${esc(game.title)}</h3>
+          <p>${esc(WP.warmups.rulesText(game, d.game.params))}</p>
+          ${state.results.map((r) => `<p class="drill-status"><span class="badge badge-${r.status}">${STATUS_LABEL[r.status]}</span> <span class="small">${esc(r.summary)}</span></p>`).join('')}
+          <div class="btn-row"><button class="btn" type="button" data-game="${game.id}">Play again</button></div>
+        </div>
+      </section>` : ''}
+
       ${current ? `<section class="section">
         <p class="eyebrow">Current drill</p>
         <div class="idea-card drill-current">
@@ -740,6 +913,7 @@
           ${state.showModel ? `<pre class="fw-example">${esc(current.model)}</pre><p class="small muted">One possible answer. Yours can be different and still follow the rule.</p>` : ''}
         </div>
       </section>` : ''}
+      ${renderPath(g)}
       <section class="section">
         <p class="eyebrow">${esc(g.name)} drills · ${doneCount} of ${drills.length} done</p>
         <p class="small muted">Short exercises that train one rule at a time. Each one opens a flawed passage with its check turned on. Fix it until the check says “Following”, then compare with a model answer.</p>
@@ -749,7 +923,8 @@
             <span class="drill-task">${esc(x.task)}</span>
           </button>
         </li>`).join('')}</ul>
-      </section>`;
+      </section>
+      ${renderWarmups()}`;
   }
 
   function startDrill(id) {
@@ -767,6 +942,7 @@
     }
     state.showModel = false;
     openDoc(d.id);
+    $('pane-practice').scrollTop = 0;
     state.spotlight = drill.rule;
     state.expanded.add(drill.rule);
     applyFilters();
@@ -1012,18 +1188,47 @@
             </div>
           </div>
         </div>
-        <p class="small muted">${empty ? `Start writing and ${esc(g.name.toLowerCase())} checks will mark your draft as you type.` : `Checked against ${esc(g.name)} rules${frameworkDef() && frameworkDef().structure !== false ? ` and the “${esc(frameworkDef().name)}” framework` : ''}. Hover a highlight to see why.`}</p>
+        <p class="small muted">${doc().game ? 'Checked against this warm-up’s rules only. Genre checks come back when you open a normal draft.' : empty ? `Start writing and ${esc(g.name.toLowerCase())} checks will mark your draft as you type.` : `Checked against ${esc(g.name)} rules${frameworkDef() && frameworkDef().structure !== false ? ` and the “${esc(frameworkDef().name)}” framework` : ''}. Hover a highlight to see why.`}</p>
         <div class="filters" role="group" aria-label="Show highlights">
           ${LEVELS.map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
         </div>
-        ${spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
+        <label class="toggle"><input type="checkbox" id="oneThingToggle" ${prefs.oneThing ? 'checked' : ''}> <span><b>One thing at a time.</b> Show only the most important problem, then the next.</span></label>
+        ${prefs.oneThing ? (spot ? `<div class="spotlight-bar"><span>Fix this first: ${esc(spot.title)} <span class="small">(${issuesInOrder(results).findIndex((r) => r.id === spot.id) + 1} of ${issuesInOrder(results).length})</span></span><button class="btn btn-quiet" type="button" data-act="next-thing">Next issue</button></div>` : '<div class="spotlight-bar"><span>Nothing to fix right now. Nice work.</span></div>')
+          : spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
       </section>
       ${groups.map((grp) => `
         <section class="section check-group">
           <p class="eyebrow">${esc(grp.name)}</p>
           ${grp.items.map(renderCheck).join('')}
-        </section>`).join('')}`;
+        </section>`).join('')}
+      ${renderMuted()}`;
     pane.scrollTop = scroll;
+  }
+
+  function renderMuted() {
+    const g = genre();
+    const ids = prefs.muted[g.id] || [];
+    if (!ids.length || doc().game) return '';
+    return `<section class="section">
+        <p class="eyebrow">Turned off</p>
+        <ul class="muted-list">${ids.map((id) => {
+          const c = g.checks.find((x) => x.id === id);
+          return c ? `<li><span>${esc(c.title)}</span><button class="btn btn-small" type="button" data-unmute="${id}">Turn back on</button></li>` : '';
+        }).join('')}</ul>
+      </section>`;
+  }
+
+  function setMuted(id, on) {
+    const g = genre();
+    const list = new Set(prefs.muted[g.id] || []);
+    if (on) list.add(id);
+    else list.delete(id);
+    prefs.muted[g.id] = [...list];
+    savePrefs();
+    if (state.spotlight === id) state.spotlight = null;
+    state.expanded.delete(id);
+    analyze();
+    applyFilters();
   }
 
   function renderCheck(r) {
@@ -1040,6 +1245,7 @@
       </button>
       ${open ? `<div class="check-body">
         <p class="check-why"><b>The rule:</b> ${esc(r.why || '')}</p>
+        ${doc().game ? '' : `<div class="btn-row"><button class="btn btn-quiet btn-small" type="button" data-mute="${r.id}">Turn off this check</button></div>`}
         ${fixable.length >= 2 ? `<div class="btn-row"><button class="btn" type="button" data-fix-all="${r.id}">${esc(fixable[0].fixes[0].label)}: all ${fixable.length}</button></div>` : ''}
         ${list.length ? `<ul class="hits">${list.slice(0, 14).map((m) => `
           <li class="hit hit-${m.level}">
@@ -1139,7 +1345,7 @@
   function openExample(id) {
     const g = genre();
     const fw = g.frameworks.find((f) => f.id === id);
-    const d = newDoc(g.id, { title: `Example: ${fw.name}`, framework: fw.id, text: `> Example of the ${fw.name} framework. Study it, then try your own version.\n\n${fw.example}` });
+    const d = newDoc(g.id, { example: true, title: `Example: ${fw.name}`, framework: fw.id, text: `> Example of the ${fw.name} framework. Study it, then try your own version.\n\n${fw.example}` });
     openDoc(d.id);
     toast('Example opened as a new draft. Your other drafts are in the Drafts tab.');
   }
@@ -1149,6 +1355,11 @@
   function renderLearn() {
     const g = genre();
     const gd = g.guide;
+    if (!prefs.learned[g.id]) {
+      prefs.learned[g.id] = true;
+      savePrefs();
+      if (prefs.leftTab === 'practice') setTimeout(renderPractice, 0);
+    }
     $('pane-learn').innerHTML = `
       <section class="section">
         <p class="eyebrow">${esc(g.name)} basics</p>
@@ -1482,6 +1693,7 @@
     });
     window.addEventListener('resize', () => {
       applyLayout();
+      fitTopbar();
       editor.render();
     });
 
@@ -1564,10 +1776,25 @@
     };
     chartTip($('pane-drafts'));
 
+    $('pane-checks').addEventListener('change', (e) => {
+      if (e.target.id !== 'oneThingToggle') return;
+      prefs.oneThing = e.target.checked;
+      savePrefs();
+      if (!prefs.oneThing) {
+        state.spotlight = null;
+        state.expanded.clear();
+      } else pickOneThing(state.results);
+      applyFilters();
+      renderChecks();
+    });
+    $('genreSelect').addEventListener('change', (e) => setGenre(e.target.value));
+
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (!b) return;
       if (b.dataset.drill) startDrill(b.dataset.drill);
+      else if (b.dataset.game) startGame(b.dataset.game);
+      else if (b.dataset.path) runPathStep(Number(b.dataset.path));
       else if (b.dataset.act === 'toggle-model') {
         state.showModel = !state.showModel;
         renderPractice();
@@ -1684,6 +1911,15 @@
         renderChecks();
         return;
       }
+      const mute = e.target.closest('[data-mute]');
+      if (mute) {
+        setMuted(mute.dataset.mute, true);
+        toast('Check turned off for this genre. Turn it back on at the bottom of the list.');
+        return;
+      }
+      const unmute = e.target.closest('[data-unmute]');
+      if (unmute) return setMuted(unmute.dataset.unmute, false);
+      if (e.target.closest('[data-act="next-thing"]')) return nextOneThing();
       const fixBtn = e.target.closest('[data-fix]');
       if (fixBtn) {
         const [mi, fi] = fixBtn.dataset.fix.split(':').map(Number);
@@ -1788,6 +2024,7 @@
     applyLayout();
     persist(true);
     if (!prefs.toured) setTimeout(startTour, 500);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTopbar, () => {});
   }
 
   boot();

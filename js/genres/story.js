@@ -70,7 +70,7 @@
         const marks = [];
         const used = [];
         for (const [sense, words] of Object.entries(lex.senses)) {
-          const hits = T.findAll(ctx, T.phraseRegex(words));
+          const hits = T.findAll(ctx, T.formsRegex(words));
           if (hits.length) used.push(sense);
           hits.forEach((h) => marks.push(mark(h, 'good', `Sense of ${sense}: ${quote(h.text)}.`)));
         }
