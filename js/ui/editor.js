@@ -194,6 +194,13 @@
     }
 
     keepCaretVisible() {
+      // Measure after the browser's own layout pass: forcing it synchronously right
+      // after a large paste is very slow in Chromium.
+      cancelAnimationFrame(this.caretFrame);
+      this.caretFrame = requestAnimationFrame(() => this.scrollToCaret());
+    }
+
+    scrollToCaret() {
       const probe = this.bd.querySelector('.caret-probe');
       if (!probe || !this.scroller) return;
       const r = probe.getBoundingClientRect();

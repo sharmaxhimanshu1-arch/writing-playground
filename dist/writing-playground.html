@@ -1181,6 +1181,20 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .rhythm-chart .bar-hit { fill: transparent; cursor: pointer; }
 .rhythm-chart g:hover rect, .rhythm-chart .bar-hit:hover { fill: rgba(127, 127, 127, 0.12); }
 
+/* ---------- Drafts: search and storage ---------- */
+
+.search {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+}
+.storage { display: flex; flex-direction: column; gap: 6px; }
+.storage-track { width: 100%; }
+.goal-fill.warn { background: var(--warn); }
+
 </style>
 </head>
 <body>
@@ -6072,6 +6086,13 @@ You told me to.`,
     }
 
     keepCaretVisible() {
+      // Measure after the browser's own layout pass: forcing it synchronously right
+      // after a large paste is very slow in Chromium.
+      cancelAnimationFrame(this.caretFrame);
+      this.caretFrame = requestAnimationFrame(() => this.scrollToCaret());
+    }
+
+    scrollToCaret() {
       const probe = this.bd.querySelector('.caret-probe');
       if (!probe || !this.scroller) return;
       const r = probe.getBoundingClientRect();
@@ -6630,11 +6651,61 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   }
 
   let saveTimer = null;
+  /* Browser storage holds roughly 5 million characters per site. Version history is the
+     first thing to give way: the oldest automatic versions are thinned out before the
+     limit is reached, and again if a save is refused for lack of space. */
+  const STORAGE_SOFT_LIMIT = 3500000;
+  const STORAGE_TOTAL = 5000000;
+
+  function storageUsed() {
+    let n = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        n += k.length + (localStorage.getItem(k) || '').length;
+      }
+    } catch (e) {
+      return null;
+    }
+    return n;
+  }
+
+  /** Drops the oldest automatic versions (never ones you saved) until the drafts fit. */
+  function pruneVersions(target) {
+    let size = JSON.stringify(state.docs).length;
+    let removed = 0;
+    while (size > target) {
+      let oldest = null;
+      for (const d of state.docs) {
+        for (const v of d.versions || []) {
+          if (v.label === 'Saved by you') continue;
+          if (!oldest || v.at < oldest.v.at) oldest = { d, v };
+        }
+      }
+      if (!oldest) break;
+      oldest.d.versions = oldest.d.versions.filter((x) => x !== oldest.v);
+      size -= oldest.v.text.length + 80;
+      removed++;
+    }
+    return removed;
+  }
+
   function persist(immediate) {
     clearTimeout(saveTimer);
     const run = () => {
-      const ok = save(STORE_DOCS, state.docs);
-      $('saveState').textContent = ok ? 'Saved in this browser' : 'Not saved: browser storage is unavailable';
+      if (JSON.stringify(state.docs).length > STORAGE_SOFT_LIMIT) pruneVersions(STORAGE_SOFT_LIMIT * 0.85);
+      let ok = save(STORE_DOCS, state.docs);
+      if (!ok && pruneVersions(JSON.stringify(state.docs).length * 0.7)) ok = save(STORE_DOCS, state.docs);
+      if (ok) {
+        state.storageWarned = false;
+        $('saveState').textContent = 'Saved in this browser';
+      } else {
+        $('saveState').textContent = 'Not saved: browser storage is full or blocked';
+        if (!state.storageWarned) {
+          state.storageWarned = true;
+          toast('Your drafts could not be saved. Download a backup from the Drafts tab, then delete drafts you no longer need.');
+        }
+      }
     };
     if (immediate) run();
     else {
@@ -6690,6 +6761,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       tip.style.top = Math.max(12, y) + 'px';
     },
   });
+
+  WP.editorInstance = editor;
 
   function levelRank(l) {
     return { bad: 4, warn: 3, good: 2, info: 1 }[l] || 0;
@@ -7335,7 +7408,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   /* ---------- modal + tour ---------- */
 
+  let modalReturnFocus = null;
+
   function openModal(title, html) {
+    if ($('modal').hidden) modalReturnFocus = document.activeElement;
     $('modalTitle').textContent = title;
     $('modalBody').innerHTML = html;
     $('modal').hidden = false;
@@ -7344,6 +7420,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function closeModal() {
     $('modal').hidden = true;
+    if (modalReturnFocus && document.contains(modalReturnFocus)) modalReturnFocus.focus({ preventScroll: true });
+    modalReturnFocus = null;
   }
 
   const TOUR = [
@@ -7726,7 +7804,9 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   }
 
   function renderDrafts() {
-    const items = state.docs.slice().sort((a, b) => b.updated - a.updated).map((d) => {
+    const q = (state.draftQuery || '').trim().toLowerCase();
+    const matches = (d) => !q || (d.title || '').toLowerCase().includes(q) || d.text.toLowerCase().includes(q) || genreById(d.genre).name.toLowerCase().includes(q);
+    const items = state.docs.slice().sort((a, b) => b.updated - a.updated).filter(matches).map((d) => {
       const words = T.parse(d.text).wordCount;
       const confirming = state.confirmDelete === d.id;
       return `<li class="draft-item ${d.id === state.currentId ? 'current' : ''}">
@@ -7747,17 +7827,93 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
           <label class="btn" for="importFile">Open a file</label>
           <input type="file" id="importFile" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         </div>
-        <ul class="draft-list">${items}</ul>
-        <p class="small muted">Drafts are saved in this browser only. Copy or download anything you want to keep elsewhere.</p>
+        ${state.docs.length > 5 ? `<label class="sr-only" for="draftSearch">Search drafts</label><input class="search" id="draftSearch" type="search" placeholder="Search ${state.docs.length} drafts" value="${esc(state.draftQuery || '')}" autocomplete="off">` : ''}
+        <ul class="draft-list">${items || '<li class="small muted">No drafts match.</li>'}</ul>
       </section>
+      ${renderStorage(canDownload)}
       ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
         <div class="btn-row">
           <button class="btn" type="button" data-act="copy">Copy text</button>
+          <button class="btn" type="button" data-act="duplicate">Make a copy</button>
           ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
       </section>`;
+  }
+
+  function renderStorage(canDownload) {
+    const used = storageUsed();
+    const pct = used == null ? 0 : Math.min(100, (used / STORAGE_TOTAL) * 100);
+    const mb = (n) => (n / 1e6).toFixed(1);
+    return `<section class="section">
+        <p class="eyebrow">Keep your work safe</p>
+        <p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>
+        ${used == null ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
+        <div class="btn-row">
+          ${canDownload ? '<button class="btn" type="button" data-act="backup">Download a backup</button>' : ''}
+          <label class="btn" for="restoreFile">Restore a backup</label>
+          <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+        </div>
+      </section>`;
+  }
+
+  function backupData() {
+    const keep = ['days', 'drillsDone', 'challenges', 'pieces', 'warmups', 'learned', 'muted'];
+    const p = {};
+    keep.forEach((k) => (p[k] = prefs[k]));
+    return JSON.stringify({ app: 'writing-playground', format: 1, exported: new Date().toISOString(), docs: state.docs, progress: p }, null, 1);
+  }
+
+  function downloadBackup() {
+    const name = `writing-playground-backup-${dayKey()}.json`;
+    saveFile(name, backupData(), 'application/json', 'Backup saved. Keep it somewhere safe, like your cloud drive.');
+  }
+
+  function restoreBackup(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(String(reader.result));
+      } catch (e) {
+        return toast('That file isn’t a Writing Playground backup.');
+      }
+      if (!data || data.app !== 'writing-playground' || !Array.isArray(data.docs)) return toast('That file isn’t a Writing Playground backup.');
+      let added = 0;
+      let updated = 0;
+      for (const d of data.docs) {
+        if (!d || typeof d.id !== 'string' || typeof d.text !== 'string') continue;
+        if (!WP.genres.some((g) => g.id === d.genre)) d.genre = WP.genres[0].id;
+        const mine = state.docs.find((x) => x.id === d.id);
+        if (!mine) {
+          state.docs.push(d);
+          added++;
+        } else if ((d.updated || 0) > (mine.updated || 0)) {
+          Object.assign(mine, d);
+          updated++;
+        }
+      }
+      const p = data.progress || {};
+      for (const k of ['drillsDone']) if (Array.isArray(p[k])) prefs[k] = [...new Set(prefs[k].concat(p[k]))];
+      for (const k of ['challenges', 'pieces', 'warmups', 'learned', 'muted']) if (p[k] && typeof p[k] === 'object') prefs[k] = Object.assign({}, p[k], prefs[k]);
+      if (p.days && typeof p.days === 'object') for (const [k, v] of Object.entries(p.days)) prefs.days[k] = Math.max(prefs.days[k] || 0, Number(v) || 0);
+      savePrefs();
+      persist(true);
+      renderAll();
+      renderDrafts();
+      toast(`Backup restored: ${added} new ${added === 1 ? 'draft' : 'drafts'}, ${updated} updated. Nothing was deleted.`);
+    };
+    reader.readAsText(file);
+  }
+
+  function duplicateDoc() {
+    const d = doc();
+    const copy = newDoc(d.genre, { title: `${d.title || 'Untitled draft'} (copy)`, framework: d.framework, text: d.text });
+    persist(true);
+    openDoc(copy.id);
+    toast('Copy made. Experiment freely; the original is unchanged.');
   }
 
   function openDoc(id) {
@@ -7778,9 +7934,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   }
 
   function deleteDoc(id) {
+    const genreId = genre().id;
     state.docs = state.docs.filter((d) => d.id !== id);
     state.confirmDelete = null;
-    if (!state.docs.length) newDoc(genre().id);
+    if (!state.docs.length) newDoc(genreId);
     if (id === state.currentId || !doc()) openDoc(state.docs[0].id);
     else renderDrafts();
     persist(true);
@@ -7802,20 +7959,17 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     }
   }
 
-  function downloadText(ext) {
-    const d = doc();
-    const name = ((d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'draft') + '.' + ext;
-    const body = ext === 'md' ? `# ${d.title || 'Untitled draft'}\n\n${d.text}\n` : d.text;
+  function saveFile(name, body, type, okMsg) {
     if (downloads) {
       downloads.save({ filename: name, data: body }).then(
-        () => toast('File saved.'),
+        () => toast(okMsg || 'File saved.'),
         (e) => {
           if (e && e.code !== 'declined') toast('This page can’t save files here. Use Copy text instead.');
         }
       );
       return;
     }
-    const blob = new Blob([body], { type: ext === 'md' ? 'text/markdown' : 'text/plain' });
+    const blob = new Blob([body], { type });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = name;
@@ -7825,6 +7979,14 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       URL.revokeObjectURL(a.href);
       a.remove();
     }, 0);
+    if (okMsg) toast(okMsg);
+  }
+
+  function downloadText(ext) {
+    const d = doc();
+    const name = ((d.title || 'draft').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'draft') + '.' + ext;
+    const body = ext === 'md' ? `# ${d.title || 'Untitled draft'}\n\n${d.text}\n` : d.text;
+    saveFile(name, body, ext === 'md' ? 'text/markdown' : 'text/plain');
   }
 
   /* ---------- Checks pane ---------- */
@@ -8422,6 +8584,18 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     });
     $('pane-drafts').addEventListener('change', (e) => {
       if (e.target.id === 'importFile') importFile(e.target.files && e.target.files[0]);
+      if (e.target.id === 'restoreFile') restoreBackup(e.target.files && e.target.files[0]);
+    });
+    $('pane-drafts').addEventListener('input', (e) => {
+      if (e.target.id !== 'draftSearch') return;
+      state.draftQuery = e.target.value;
+      const pos = e.target.selectionStart;
+      renderDrafts();
+      const box = $('draftSearch');
+      if (box) {
+        box.focus();
+        box.setSelectionRange(pos, pos);
+      }
     });
     $('pane-checks').addEventListener('toggle', (e) => {
       if (e.target.id === 'rhythmBox') {
@@ -8432,6 +8606,21 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     $('modalClose').addEventListener('click', closeModal);
     $('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') closeModal();
+    });
+    // Keep Tab inside the dialog while it is open.
+    $('modal').addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const f = [...$('modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.disabled && x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     });
     $('tour').addEventListener('click', (e) => {
       const b = e.target.closest('[data-tour]');
@@ -8603,6 +8792,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         $('docTitle').focus();
       } else if (t.dataset.act === 'copy') copyText();
       else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
+      else if (t.dataset.act === 'backup') downloadBackup();
+      else if (t.dataset.act === 'duplicate') duplicateDoc();
       else if (t.dataset.act === 'save-version') {
         if (pushVersion(doc(), 'Saved by you')) toast('Version saved.');
         else toast('This version is already saved. Keep writing and save again.');
