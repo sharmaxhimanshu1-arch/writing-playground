@@ -15,12 +15,13 @@ Drafts are saved automatically in your browser's local storage. To keep a copy e
 
 | Area | What it does |
 | --- | --- |
-| **Genre tabs** (top) | Comedy, Video Script, Short Story, Essay & Blog, Poetry, Copywriting. Each genre has its own drafts, frameworks, prompts, lessons and checks. |
-| **Ideas** (left) | Your daily word count and streak (with a 14-day chart), a prompt generator, an *idea builder* where you click any part to swap it, "stuck?" questions that push a draft forward, timed writing sprints, and a word goal. |
-| **Practice** (left) | 24 short drills, four per genre, each training one rule. A drill opens a flawed passage with its check turned on. Fix it until the check turns green, then compare with a model answer. |
-| **The page** (center) | A distraction-free editor. Click a highlight to get a one-click fix where one exists (delete a filler word, "said angrily" → "said", "utilize" → "use"). **Listen** reads the draft (or your selection) aloud, so you can hear a joke's timing or a script's rhythm. Use **Wide page** for more room or **Focus** to hide both panels. |
+| **Genre tabs** (top) | Comedy, Video Script, Short Story, Essay & Blog, Poetry, Copywriting, Speech, Screenplay. Each genre has its own drafts, frameworks, prompts, lessons and checks. |
+| **Ideas** (left) | Your daily word count and streak (with a 14-day chart), a new challenge every day for each genre (a prompt, a framework and a word target), a prompt generator, an *idea builder* where you click any part to swap it, "stuck?" questions that push a draft forward, timed writing sprints, and a word goal. |
+| **Practice** (left) | 32 short drills, four per genre, each training one rule. A drill opens a flawed passage with its check turned on. Fix it until the check turns green, then compare with a model answer. |
+| **Drafts** (left) | All your drafts, plus the history of the current one: versions saved automatically every 10 minutes (or whenever you click **Save a version now**), a chart of how the score changed, a word-by-word **Compare** with today's text, and **Restore**. |
+| **The page** (center) | A distraction-free editor. Click a highlight to see why it's marked, get a one-click fix where one exists (delete a filler word, "said angrily" → "said", "utilize" → "use"). **Listen** reads the draft (or your selection) aloud, so you can hear a joke's timing or a script's rhythm. Use **Wide page** for more room or **Focus** to hide both panels. |
 | **Checks** (right) | Your draft score, each rule's status (Following / Improve / Breaking / Tip), and why the rule exists. Click a check to show only its highlights, click an item to jump to it, or fix every occurrence at once. |
-| **Coach** (right) | An AI writing coach powered by Claude: **Review my draft** (strengths, the fixes that matter most, and a rewrite you can drop in for each), **Rewrite a passage** (select text, pick a goal like "Sharpen the punchline", get three versions), **Brainstorm** (five ideas with first lines), and **Ask the coach** questions about your draft. It runs when the playground is opened as a Claude artifact and uses the viewer's own Claude account. |
+| **Coach** (right) | An AI writing coach powered by Claude: **Review my draft** (strengths, the fixes that matter most, and a rewrite you can drop in for each), **Rewrite a passage** (select text, pick a goal like "Sharpen the punchline", get three versions), **Brainstorm** (five ideas with first lines), and **Ask the coach** questions about your draft. You can also click any highlight and choose **Ask the coach** to have it explained. It runs when the playground is opened as a Claude artifact and uses the viewer's own Claude account. |
 | **Frameworks** (right) | Proven structures for the genre, each with step-by-step beats, a worked example, and an **Insert outline** button. Once inserted, the checker tracks which beats you have written. |
 | **Learn** (right) | Core principles, common beginner mistakes, and a glossary for the genre. |
 
@@ -31,7 +32,7 @@ Drafts are saved automatically in your browser's local storage. To keep a copy e
 - **Red wavy line**: breaks a core rule (opening a video with "welcome back", laughing at your own joke, a cliché).
 - **Dotted line**: information only (for example, a line's syllable count in a poem).
 
-Hover over any highlight to see the reason, or move the cursor into it to read the note in the status bar.
+Hover over any highlight to see the reason, or click it for the fix card. First-time visitors get a 30-second tour; you can replay it from the **Learn** tab.
 
 ### Writing conventions the checker understands
 
@@ -52,6 +53,8 @@ Hover over any highlight to see the reason, or move the cursor into it to read t
 | Essay & Blog | Classic essay, PREP, Inverted pyramid, How-to, Problem → Solution, Personal essay | Main point up front, headings, transitions, evidence, weasel words, strong ending, reading level |
 | Poetry | Free verse, Haiku, Limerick, Shakespearean sonnet, Ballad, Couplets | Lines per stanza, syllable count, rhyme scheme, concrete images, line endings, clichés |
 | Copywriting | AIDA, PAS, Before · After · Bridge, FAB, 4 U's headlines, Hook · Story · Offer | Headline, "you" over "we", benefits, call to action, proof and urgency, buzzwords, hype level |
+| Speech | Toast, Idea talk (TED-style), Monroe's Motivated Sequence, Elevator pitch, Tell them three times | Strong opening, speaking time, sayable sentences, signposting, rule of three, repetition for emphasis, a story, speaking to the room, ending on your message |
+| Screenplay | Scene (goal · conflict · turn), Short film, Argument scene, Cold open | Scene headings, lean action lines, present tense, only what can be filmed, no camera directions, short speeches, few parentheticals, subtext, page count |
 
 The checks are rules of thumb built from word lists and patterns, not an AI that understands your meaning. They will sometimes flag something you did on purpose. Professional writers break every one of these rules deliberately; the goal is to know the rule first.
 
@@ -63,6 +66,7 @@ css/app.css           styles (light and dark themes)
 js/core/text.js       parser: sentences, words, syllables, readability, sections
 js/core/lexicon.js    word lists (filler, clichés, senses, buzzwords…)
 js/core/checks.js     check framework and checks shared by all genres
+js/core/diff.js       word-level diff used to compare draft versions
 js/genres/*.js        one file per genre: checks, frameworks, lessons, prompts, example draft
 js/genres/drills.js   practice drills for every genre
 js/ui/editor.js       highlighting editor (transparent textarea over a rendered backdrop)

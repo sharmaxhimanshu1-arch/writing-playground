@@ -371,6 +371,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       init(api);
     },
     render,
+    isReady: () => C.status === 'ready',
+    askAbout(q) {
+      if (C.status !== 'ready' || C.busy) return false;
+      ask(q);
+      return true;
+    },
     reset() {
       C.rewrite = null;
       C.ideas = null;
