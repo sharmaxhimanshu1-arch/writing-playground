@@ -3,6 +3,7 @@
 //   npm run e2e -- starter    run only the files whose name contains "starter"
 // Screenshots land in tests/e2e/output/ (ignored by git).
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 
 let chromium;
@@ -21,6 +22,24 @@ fs.mkdirSync(out, { recursive: true });
 // A returning visitor who has seen the tour and keeps both panels open.
 const RETURNING = { toured: true, layout: 2, showLeft: true, showRight: true };
 
+// Pages are served over http://, like GitHub Pages. (In Playwright's throwaway profiles, file:// pages
+// sometimes lose localStorage across a reload, which a real browser profile does not do.)
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
+function serve() {
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html';
+    const file = path.join(root, rel);
+    if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      res.writeHead(404);
+      return res.end('Not found');
+    }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+    fs.createReadStream(file).pipe(res);
+  });
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
+}
+let base = '';
+
 async function runFile(browser, file) {
   const name = path.basename(file, '.test.js');
   const failures = [];
@@ -31,7 +50,8 @@ async function runFile(browser, file) {
     out,
     fixtures,
     RETURNING,
-    url: (p = 'index.html') => 'file://' + path.join(root, p),
+    url: (p = 'index.html') => `${base}/${p}`,
+    fileUrl: (p = 'index.html') => 'file://' + path.join(root, p),
     /** A fresh browser profile and page. `prefs` seeds localStorage once (kept across reloads). */
     async page({ width = 1440, height = 900, scheme = 'light', prefs, downloads = false } = {}) {
       const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: scheme, acceptDownloads: downloads });
@@ -96,10 +116,13 @@ async function runFile(browser, file) {
     console.error(`No test files match "${filter}".`);
     process.exit(1);
   }
+  const server = await serve();
+  base = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
   let failed = 0;
   for (const f of files) failed += (await runFile(browser, f)) ? 1 : 0;
   await browser.close();
+  server.close();
   console.log(failed ? `\n${failed} of ${files.length} test files failed.` : `\nAll ${files.length} test files passed.`);
   process.exit(failed ? 1 : 0);
 })();
