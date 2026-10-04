@@ -984,6 +984,90 @@ code, kbd {
 .panel-tabs::-webkit-scrollbar { display: none; }
 .panel-tabs button { flex: none; }
 
+/* ---------- Tour ---------- */
+
+.tour {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(440px, calc(100vw - 32px));
+  background: var(--raised);
+  border: 1px solid var(--accent);
+  box-shadow: var(--shadow);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tour h3 { margin: 0; font-family: var(--font-editor); font-size: 1.375rem; font-weight: 600; text-wrap: balance; }
+.tour p { margin: 0; }
+.tour-target { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: 8px; position: relative; z-index: 5; }
+
+/* ---------- Modal ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 14, 22, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.modal-card {
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: min(760px, 100%);
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.modal-head h2 { margin: 0; font-family: var(--font-editor); font-size: 1.25rem; font-weight: 600; }
+.modal-body { padding: 16px 18px 20px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.modal-body p { margin: 0; }
+.diff {
+  margin: 0;
+  font-family: var(--font-editor);
+  font-size: 1rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+ins { text-decoration: none; background: var(--good-tint); color: var(--good); border-radius: 2px; }
+del { text-decoration: line-through; text-decoration-color: var(--bad); color: var(--bad); background: var(--bad-tint); border-radius: 2px; }
+
+/* ---------- History ---------- */
+
+.version-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.version {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+}
+.version-meta { display: flex; flex-direction: column; font-size: var(--text-sm); min-width: 0; }
+.version-meta span { color: var(--muted); font-size: var(--text-xs); }
+.score-spark { width: 100%; height: auto; display: block; overflow: visible; }
+.score-spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.score-spark .grid { stroke: var(--line); stroke-dasharray: 3 3; }
+.score-spark .pt { fill: var(--accent); }
+.score-spark .end { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.score-spark .bar-hit { fill: transparent; }
+
+.challenge.done { border-color: var(--good); }
+
 </style>
 <div class="app" id="app">
   <header class="topbar">
@@ -1070,6 +1154,16 @@ code, kbd {
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <div class="fix-card" id="fixCard" role="dialog" aria-label="Suggested fix" hidden></div>
+  <div class="tour" id="tour" role="dialog" aria-label="Welcome tour" hidden></div>
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h2 id="modalTitle"></h2>
+        <button class="btn btn-quiet" id="modalClose" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
 <script>
@@ -1859,6 +1953,88 @@ window.WP = window.WP || {}; window.WP.ARTIFACT = true;
 
   WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus, DELETE };
   WP.genres = WP.genres || [];
+})(window.WP = window.WP || {});
+
+// ---- js/core/diff.js
+/*
+ * Small text diff for comparing draft versions: line-level LCS, then word-level
+ * LCS inside lines that changed. Returns HTML with <ins> and <del>.
+ */
+(function (WP) {
+  'use strict';
+
+  function lcs(a, b) {
+    const n = a.length;
+    const m = b.length;
+    if (n * m > 4e6) return a.map((v) => ({ t: '-', v })).concat(b.map((v) => ({ t: '+', v })));
+    const w = m + 1;
+    const dp = new Int32Array((n + 1) * w);
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        dp[i * w + j] = a[i] === b[j] ? dp[(i + 1) * w + j + 1] + 1 : Math.max(dp[(i + 1) * w + j], dp[i * w + j + 1]);
+      }
+    }
+    const ops = [];
+    let i = 0;
+    let j = 0;
+    while (i < n && j < m) {
+      if (a[i] === b[j]) {
+        ops.push({ t: '=', v: a[i] });
+        i++;
+        j++;
+      } else if (dp[(i + 1) * w + j] >= dp[i * w + j + 1]) ops.push({ t: '-', v: a[i++] });
+      else ops.push({ t: '+', v: b[j++] });
+    }
+    while (i < n) ops.push({ t: '-', v: a[i++] });
+    while (j < m) ops.push({ t: '+', v: b[j++] });
+    return ops;
+  }
+
+  const words = (s) => s.match(/\s+|[^\s]+/g) || [];
+
+  function wordDiff(a, b, esc) {
+    return lcs(words(a), words(b)).map((o) => (o.t === '=' ? esc(o.v) : o.t === '-' ? `<del>${esc(o.v)}</del>` : `<ins>${esc(o.v)}</ins>`)).join('');
+  }
+
+  /** Diff of two texts as HTML, plus counts of words added and removed. */
+  function diff(before, after, esc) {
+    const ops = lcs(before.split('\n'), after.split('\n'));
+    const out = [];
+    let added = 0;
+    let removed = 0;
+    for (let k = 0; k < ops.length;) {
+      if (ops[k].t === '=') {
+        out.push(esc(ops[k].v));
+        k++;
+        continue;
+      }
+      const dels = [];
+      const ins = [];
+      while (k < ops.length && ops[k].t !== '=') (ops[k].t === '-' ? dels : ins).push(ops[k++].v);
+      const pairs = Math.min(dels.length, ins.length);
+      for (let p = 0; p < pairs; p++) {
+        const w = lcs(words(dels[p]), words(ins[p]));
+        w.forEach((o) => {
+          if (/\S/.test(o.v)) {
+            if (o.t === '+') added++;
+            if (o.t === '-') removed++;
+          }
+        });
+        out.push(wordDiff(dels[p], ins[p], esc));
+      }
+      dels.slice(pairs).forEach((l) => {
+        removed += words(l).filter((x) => /\S/.test(x)).length;
+        out.push(`<del>${esc(l)}</del>`);
+      });
+      ins.slice(pairs).forEach((l) => {
+        added += words(l).filter((x) => /\S/.test(x)).length;
+        out.push(`<ins>${esc(l)}</ins>`);
+      });
+    }
+    return { html: out.join('\n'), added, removed };
+  }
+
+  WP.diff = diff;
 })(window.WP = window.WP || {});
 
 // ---- js/genres/comedy.js
@@ -4208,6 +4384,767 @@ Download Leafy today and get your first month free.`,
   });
 })(window.WP = window.WP || {});
 
+// ---- js/genres/speech.js
+(function (WP) {
+  'use strict';
+  const T = WP.text;
+  const lex = WP.lex;
+  const { C, mark, plural, quote, DELETE } = WP.checks;
+
+  const WPM = 130; // speeches are delivered slower than video narration
+
+  const FLAT_OPENING = /^(?:hi|hello|good (?:morning|afternoon|evening)|thank you(?: so much)? for (?:having|inviting) me|thanks for having me|my name is|today i(?:'m| am| will|'ll)? (?:going to |gonna )?(?:talk|speak)|i(?:'m| am) here (?:today )?to (?:talk|speak)|i want to (?:talk|speak) (?:to you )?about|the topic of my (?:speech|talk))\b[^.!?]*/i;
+
+  const SIGNPOSTS = ['first', 'second', 'third', 'finally', "here's why", 'here is why', 'let me tell you', 'the point is',
+    "here's the thing", 'so what does this mean', 'which brings me to', 'that brings me to', 'my second point',
+    'my last point', 'in other words', "let's start with", 'imagine', 'think about', 'picture this'];
+
+  const STORY = ['when i was', 'years ago', 'one day', 'i remember', 'last year', 'last summer', 'last week', 'the first time',
+    'a few months ago', 'one night', 'one morning', 'back then', 'i was standing', 'i still remember'];
+
+  const checks = [
+    C.structure(),
+
+    {
+      id: 'speech-opening',
+      title: 'Open strong',
+      group: 'Delivery',
+      minWords: 8,
+      why: 'The first ten seconds decide whether the room listens. “Thank you for having me” and “Today I’m going to talk about…” waste them. Start with a story, a question, a surprising fact or a bold line. Thank the host after.',
+      run(ctx) {
+        const first = ctx.sentences[0];
+        const m = first.text.match(FLAT_OPENING);
+        if (m && m.index === 0) {
+          return {
+            status: 'fail',
+            summary: 'The speech opens with a formality instead of a hook.',
+            marks: [mark({ start: first.start, end: first.start + m[0].length }, 'bad', 'Flat opening. Lead with your hook; thank people or introduce yourself a few lines later.')],
+          };
+        }
+        const signals = T.findAll(ctx, /\b(you|imagine|picture|what if|why|how|\d[\d,.%]*)\b|\?/gi, first);
+        return {
+          status: signals.length ? 'pass' : 'warn',
+          summary: signals.length ? 'The opening pulls the audience in.' : 'The opening avoids clichés. Could it be a question, a story or a striking fact?',
+          marks: signals.map((h) => mark(h, 'good', 'Hook signal in your first line.')),
+        };
+      },
+    },
+
+    {
+      id: 'speech-runtime',
+      title: 'Speaking time',
+      group: 'Delivery',
+      minWords: 1,
+      why: `Speeches are delivered at about ${WPM} words per minute, slower than conversation, with pauses. A wedding toast runs 2–3 minutes (300–400 words); a TED talk is at most 18 minutes.`,
+      run(ctx) {
+        const secs = Math.round((ctx.wordCount / WPM) * 60);
+        const pauses = ctx.cues.filter((c) => /pause|beat|breath/i.test(c.text)).length;
+        return {
+          status: 'info',
+          summary: `≈ ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} at ${WPM} words/min · ${plural(pauses, 'planned pause')}.`,
+          marks: ctx.cues.filter((c) => /pause|beat|breath/i.test(c.text)).map((c) => mark(c, 'good', 'Planned pause. Silence gives the line time to land.')),
+        };
+      },
+    },
+
+    C.longSentences({
+      max: 20,
+      title: 'Sayable sentences',
+      why: 'Listeners hear a sentence once. Over about 20 words, they lose the thread and you run out of breath. Short sentences sound confident.',
+      note: 'Too long to say in one breath. Split it.',
+    }),
+
+    C.phrases({
+      id: 'signposts',
+      title: 'Signposting',
+      group: 'Structure',
+      minWords: 150,
+      why: 'Readers can see paragraphs; listeners can’t. Tell the audience where they are: “First…”, “Here’s why…”, “Which brings me to…”. It feels repetitive on paper and clear out loud.',
+      list: SIGNPOSTS,
+      level: 'good',
+      note: 'Signpost: the audience knows where they are in your talk.',
+      grade: (n, ctx) => ({
+        status: n >= Math.max(2, Math.floor(ctx.wordCount / 200)) ? 'pass' : n ? 'warn' : 'fail',
+        summary: n ? `${plural(n, 'signpost')}.` : 'No signposts. Number your points out loud: “First… Second… Finally…”.',
+      }),
+    }),
+
+    {
+      id: 'triads',
+      title: 'Rule of three',
+      group: 'Rhetoric',
+      minWords: 60,
+      why: 'Three is the most memorable number in speech: “Government of the people, by the people, for the people.” Group ideas, adjectives and phrases in threes.',
+      run(ctx) {
+        const re = /((?:[^,.!?;:\n]+,\s*){2,})(?:and|or)\s+([^,.!?;:\n]+)/gi;
+        const marks = [];
+        for (const h of T.findAll(ctx, re)) {
+          const items = h.groups[1].split(',').map((x) => x.trim()).filter(Boolean);
+          if (items.length + 1 === 3 && items.slice(1).every((x) => x.split(/\s+/).length <= 7)) {
+            marks.push(mark(h, 'good', 'A triad. Three items are easy to remember and satisfying to hear.'));
+          }
+        }
+        return {
+          status: marks.length ? 'pass' : 'warn',
+          summary: marks.length ? `${plural(marks.length, 'triad')}.` : 'No groups of three yet. Try listing three reasons, three images or three words.',
+          marks,
+        };
+      },
+    },
+
+    {
+      id: 'anaphora',
+      title: 'Repetition for emphasis',
+      group: 'Rhetoric',
+      minWords: 80,
+      why: 'Starting several sentences with the same words (“We will… We will… We will…”) is called anaphora. On paper it looks repetitive; in a speech it builds power. Martin Luther King Jr. repeated “I have a dream” eight times.',
+      run(ctx) {
+        const marks = [];
+        const key = (s) => s.words.slice(0, 2).map((w) => w.lower).join(' ');
+        for (let i = 1; i < ctx.sentences.length; i++) {
+          const a = ctx.sentences[i - 1];
+          const b = ctx.sentences[i];
+          if (a.words.length >= 2 && b.words.length >= 2 && key(a) === key(b)) {
+            marks.push(mark({ start: b.words[0].start, end: b.words[1].end }, 'good', `Repeated opening “${key(b)}” builds rhythm.`));
+          }
+        }
+        return {
+          status: marks.length ? 'pass' : 'info',
+          summary: marks.length ? `${plural(marks.length, 'repeated opening')}.` : 'No deliberate repetition yet. Try starting two or three sentences with the same phrase at your key moment.',
+          marks,
+        };
+      },
+    },
+
+    C.phrases({
+      id: 'speech-story',
+      title: 'A story',
+      group: 'Connection',
+      minWords: 120,
+      why: 'People forget statistics and remember stories. A short, specific personal story (“Last summer, I…”) makes your point human and makes the audience trust you.',
+      list: STORY,
+      level: 'good',
+      note: 'Story opener. Keep it specific: a time, a place, a detail.',
+      grade: (n) => ({
+        status: n ? 'pass' : 'warn',
+        summary: n ? `${plural(n, 'story moment')}.` : 'No story yet. What happened to you that proves your point?',
+      }),
+    }),
+
+    {
+      id: 'speech-audience',
+      title: 'Speak to the room',
+      group: 'Connection',
+      minWords: 60,
+      why: 'Say “you” and “we” to bring the audience in. A speech full of “I” sounds like a diary read aloud.',
+      run(ctx) {
+        const you = T.findAll(ctx, new RegExp(lex.youWords.source, 'gi')).length + T.findAll(ctx, new RegExp(lex.weWords.source, 'gi')).length;
+        const me = T.findAll(ctx, new RegExp(lex.meWords.source, 'gi')).length;
+        return {
+          status: you >= me ? 'pass' : you >= me / 2 ? 'warn' : 'fail',
+          summary: `“You/we” ${you} times vs “I/me” ${me} times.`,
+          marks: [],
+        };
+      },
+    },
+
+    {
+      id: 'speech-ending',
+      title: 'End on your message',
+      group: 'Structure',
+      minWords: 80,
+      why: 'The last line is what people repeat in the car home. End with your key message, a call to action or a callback to your opening. Never end on “That’s all I have” or “Any questions?”; say your closing line, then open for questions.',
+      run(ctx) {
+        const last = ctx.paragraphs[ctx.paragraphs.length - 1];
+        const weak = T.findAll(ctx, /\b(that's all i have|that’s all i have|that's it|that’s it|any questions\??|i guess that's it|so yeah|thanks for listening|thank you for listening)\b/gi, last);
+        const strong = T.findAll(ctx, T.phraseRegex(['remember', 'together', "let's", 'let us', 'raise your glass', 'raise a glass', "here's to", 'here is to', 'cheers', 'join me', 'from now on', 'start today', 'this week', 'tomorrow', 'never forget', 'i dare you', 'try it']), last).slice(0, 2);
+        const marks = weak.map((h) => Object.assign(mark(h, 'bad', `${quote(h.text)} lets the energy drain away. End on your strongest line.`), { fixes: [DELETE] }))
+          .concat(strong.map((h) => mark(h, 'good', 'Strong closing language.')));
+        return {
+          status: weak.length ? 'fail' : strong.length ? 'pass' : 'warn',
+          summary: weak.length ? 'The speech fizzles out at the end.' : strong.length ? 'The ending lands on a message or a call.' : 'What should the audience remember or do? Say it in your last line.',
+          marks,
+        };
+      },
+    },
+
+    C.filler({ ok: 1.5, warn: 3 }),
+    C.readability({ min: 4, max: 8, audience: 'listeners' }),
+    C.passive(),
+  ];
+
+  const frameworks = [
+    {
+      id: 'toast',
+      name: 'Toast',
+      summary: 'Short and warm: connect, tell one story, say something true about them, raise a glass. For weddings, birthdays, retirements.',
+      bestFor: 'Weddings, birthdays, farewells (2–3 minutes)',
+      beats: [
+        { name: 'Opening', hint: 'One line that grabs attention and says who you are to them, without “For those who don’t know me…”.' },
+        { name: 'Story', hint: 'One specific story that shows who this person is. A time, a place, a detail.' },
+        { name: 'What it shows', hint: 'What does the story say about them? Keep it sincere.' },
+        { name: 'Wish', hint: 'What you hope for them next.' },
+        { name: 'Raise a glass', hint: 'Ask everyone to stand or raise a glass, then say the toast in a few words.', min: 5 },
+      ],
+      example: `## Opening\nI have known Priya for twenty-two years, and for twenty of them she has been telling me what to do.\n\n## Story\nWhen we were nine, she organized a strike at summer camp because the pancakes were cold. She made signs. She had demands. By Thursday, the pancakes were hot.\n\n## What it shows\nThat is Priya. When something matters to her, she does not complain. She fixes it, and she brings everyone along.\n\n## Wish\nSam, you have married someone who will fight for you every single day. I hope you both always have hot pancakes and a cause worth making signs for.\n\n## Raise a glass\nPlease raise your glasses. To Priya and Sam: may every Thursday be this good.`,
+    },
+    {
+      id: 'ted',
+      name: 'Idea talk (TED-style)',
+      summary: 'One idea, built step by step: hook, why it matters, the idea, a story, evidence, and what to do with it.',
+      bestFor: 'Talks, keynotes, class presentations (5–18 minutes)',
+      beats: [
+        { name: 'Hook', hint: 'A story, a question or a surprising fact. No introduction.' },
+        { name: 'Why it matters', hint: 'Why should this audience care, right now?' },
+        { name: 'The idea', hint: 'Your one idea, in a single sentence the audience could repeat.' },
+        { name: 'Story', hint: 'A personal or real story that shows the idea in action.' },
+        { name: 'Evidence', hint: 'A fact, study or example that proves it is not just your story.' },
+        { name: 'Call to action', hint: 'What should people think or do differently tomorrow?' },
+      ],
+      example: `## Hook\nHow many of you have a drawer full of chargers for phones you no longer own?\n\n## Why it matters\nThe world throws away more than fifty million tonnes of electronics every year, and a lot of it still works.\n\n## The idea\nRepair is not a skill for experts. It is a habit anyone can start this weekend.\n\n## Story\nLast spring, my toaster died. Instead of buying a new one, I opened it with a screwdriver and a video. The problem was one loose wire. It took eleven minutes.\n\n## Evidence\nAt my local repair café last month, volunteers fixed nine of the twelve broken things people carried in.\n\n## Call to action\nSo this week, before you throw something away, open it. Look inside. You might be eleven minutes away from fixing it.`,
+    },
+    {
+      id: 'monroe',
+      name: 'Monroe’s Motivated Sequence',
+      summary: 'A persuasive structure from speech professor Alan Monroe (1930s): attention, need, satisfaction, visualization, action.',
+      bestFor: 'Persuasive speeches, pitches, debates',
+      beats: [
+        { name: 'Attention', hint: 'Grab the audience with a story, question or startling fact.' },
+        { name: 'Need', hint: 'Show the problem and why it affects them.' },
+        { name: 'Satisfaction', hint: 'Present your solution.' },
+        { name: 'Visualization', hint: 'Paint the picture: what life looks like if they act, and if they don’t.' },
+        { name: 'Action', hint: 'Tell them exactly what to do now.' },
+      ],
+      example: `## Attention\nRaise your hand if you have ever waited more than twenty minutes for the 14 bus.\n\n## Need\nThat bus carries three thousand students a day, and half of them arrive late at least once a week.\n\n## Satisfaction\nA dedicated bus lane on Main Street would cut the trip from forty minutes to fifteen.\n\n## Visualization\nImagine arriving on time, every day, with time to grab breakfast. Now imagine another year of running for a bus that is already full.\n\n## Action\nSign the petition at the back of the room today, and come to the council meeting on Thursday at six.`,
+    },
+    {
+      id: 'pitch',
+      name: 'Elevator pitch',
+      summary: 'Thirty to sixty seconds: who you are, the problem, your solution, proof, and the ask.',
+      bestFor: 'Networking, interviews, startup pitches',
+      minWordsPerBeat: 6,
+      beats: [
+        { name: 'Hook', hint: 'One line about the problem or a striking result.' },
+        { name: 'Problem', hint: 'Who has the problem and how much it costs them.' },
+        { name: 'Solution', hint: 'What you do, in plain words.' },
+        { name: 'Proof', hint: 'One number or result.' },
+        { name: 'Ask', hint: 'What you want from this listener.' },
+      ],
+      example: `## Hook\nEvery week, small restaurants throw away food worth more than their rent.\n\n## Problem\nThey order by guesswork, so they overbuy, and the extra spoils.\n\n## Solution\nShelfWise reads last month's sales and tells the chef exactly what to order each morning.\n\n## Proof\nOur first ten restaurants cut waste by a third in eight weeks.\n\n## Ask\nI'm looking for two more restaurants to join our pilot. Could I show you a demo next week?`,
+    },
+    {
+      id: 'tell-three',
+      name: 'Tell them three times',
+      summary: 'The classic teaching structure: tell them what you will tell them, tell them, then tell them what you told them.',
+      bestFor: 'Presentations, lessons, briefings',
+      beats: [
+        { name: 'Preview', hint: 'Say your topic and your three points in one or two sentences.' },
+        { name: 'Point 1', hint: 'Explain it, with an example.' },
+        { name: 'Point 2', hint: 'Explain it, with an example.' },
+        { name: 'Point 3', hint: 'Explain it, with an example.' },
+        { name: 'Review', hint: 'Repeat the three points and the one thing to remember.' },
+      ],
+      example: `## Preview\nIn the next five minutes, I'll show you three ways to remember names: say it, link it, use it.\n\n## Point 1\nFirst, say it back. "Nice to meet you, Marco." Hearing your own voice say a name doubles your chance of remembering it.\n\n## Point 2\nSecond, link it. Marco plays the drums? Picture him drumming on a map, like Marco Polo.\n\n## Point 3\nThird, use it once more before you leave. "Great talking to you, Marco."\n\n## Review\nSay it, link it, use it. Try it on the next three people you meet.`,
+    },
+  ];
+
+  WP.genres.push({
+    id: 'speech',
+    name: 'Speech',
+    tagline: 'Toasts, talks, presentations and pitches',
+    checks,
+    frameworks,
+    prompts: [
+      'Write a two-minute toast for a friend’s birthday, built around one story.',
+      'Give a five-minute talk on a skill you taught yourself.',
+      'Persuade your class or team to change one small rule.',
+      'Write a farewell speech for a coworker who is retiring.',
+      'Write a 60-second pitch for an app you wish existed.',
+      'Give a talk titled “The best mistake I ever made”.',
+      'Write a speech thanking someone who never got enough credit.',
+      'Explain why your hobby matters, to people who think it is boring.',
+      'Write the opening two minutes of a graduation speech.',
+      'Write a toast for a wedding where you barely know the couple.',
+      'Persuade your neighbors to start a community garden.',
+    ],
+    generator: {
+      template: 'A {kind} for {audience} about {topic}. Open with {opener}.',
+      parts: {
+        kind: ['2-minute toast', '5-minute talk', '60-second pitch', 'persuasive speech', 'graduation speech', 'farewell speech'],
+        audience: ['your class', 'a wedding party', 'your team at work', 'a room of strangers', 'your family', 'a town meeting'],
+        topic: ['learning to fail', 'why we should walk more', 'the person who taught you to cook', 'saying no', 'your first job', 'starting over in a new city', 'being kind online'],
+        opener: ['a question to the room', 'a one-line story', 'a surprising number', 'a moment of silence', 'a quote you disagree with', 'an object you hold up'],
+      },
+    },
+    nudges: [
+      'What is the one sentence you want people to repeat afterwards?',
+      'Which story from your own life proves your point?',
+      'Where would you pause for effect? Mark it with [PAUSE].',
+      'Read your first line out loud. Would the room look up from their phones?',
+      'Can you group your points into three?',
+      'What do you want the audience to do tomorrow because of this speech?',
+      'Is there a line you could repeat at the start and end?',
+      'Cut the warm-up. Does the speech start better at your second paragraph?',
+    ],
+    guide: {
+      intro: 'A speech is writing for the ear. Your audience can’t re-read a sentence, so structure must be obvious, sentences short and the message repeated. Write it, then read it aloud and rewrite everything you stumble on.',
+      principles: [
+        { title: 'One message', body: 'Every good speech can be summed up in one sentence. Write that sentence first and cut anything that doesn’t serve it.' },
+        { title: 'Hook first, thanks later', body: 'Start with a story, a question or a striking fact. Thank the host and introduce yourself after you have their attention.' },
+        { title: 'Tell a story', body: 'Stories are how audiences remember. Use one specific, personal story per main point.' },
+        { title: 'Signpost', body: 'Say where you are: “First…”, “Here’s why…”, “Finally…”. It sounds clear out loud even though it looks clunky on paper.' },
+        { title: 'Rule of three', body: 'Group ideas, examples and phrases in threes. It is the most memorable pattern in speech.' },
+        { title: 'Repeat on purpose', body: 'Repetition is a tool in speech: repeat your key line, or start several sentences the same way at your climax.' },
+        { title: 'Plan your pauses', body: 'A pause before or after a key line lets it land. Write [PAUSE] into the script.' },
+        { title: 'Land the ending', body: 'Finish on your message or a call to action, then stop. Questions come after the closing line, not instead of it.' },
+      ],
+      mistakes: [
+        'Opening with “Thank you for having me” or “Today I’m going to talk about…”.',
+        'Too many points: the audience remembers one or two.',
+        'Long written sentences that are hard to say.',
+        'Reading statistics with no story behind them.',
+        'Inside jokes at a toast that half the room won’t get.',
+        'Ending with “So… yeah. Any questions?”.',
+      ],
+      glossary: [
+        { term: 'Hook', def: 'The opening line that grabs the audience.' },
+        { term: 'Signpost', def: 'A phrase that tells listeners where they are in the speech.' },
+        { term: 'Triad', def: 'A group of three words, phrases or ideas.' },
+        { term: 'Anaphora', def: 'Starting several sentences with the same words for emphasis.' },
+        { term: 'Callback', def: 'Returning to an image or line from the opening at the end.' },
+        { term: 'Call to action', def: 'What you ask the audience to do.' },
+        { term: 'Toast', def: 'A short speech honoring someone, ending with raised glasses.' },
+      ],
+    },
+    sample: {
+      title: 'Example: Retirement toast',
+      framework: 'toast',
+      text: `> Example draft. Edit it and watch the checks change. Use [PAUSE] to plan a pause.
+
+Good evening everyone, thank you so much for having me here tonight to say a few words about Ray.
+
+For those who don't know me, I have worked with Ray in the accounts department for about fifteen years, and during that time I have learned a lot of things from him that I would like to share with all of you this evening.
+
+I remember my first week. I broke the printer. Ray didn't yell. He handed me a screwdriver, a coffee, and a manual from 1998. [PAUSE] We fixed it together, and he never told anyone.
+
+That is Ray. He fixes things quietly, and he makes you feel like you did it yourself.
+
+Ray, we will miss your patience. We will miss your terrible puns. We will miss your coffee, which was honestly also terrible.
+
+So yeah, that's all I have.`,
+    },
+  });
+})(window.WP = window.WP || {});
+
+// ---- js/genres/screenplay.js
+(function (WP) {
+  'use strict';
+  const T = WP.text;
+  const lex = WP.lex;
+  const { C, mark, plural, quote } = WP.checks;
+
+  const SLUG = /^\s*(?:int|ext|int\.?\s*\/\s*ext|i\/e|est)[.\s]/i;
+  const TIME = /-\s*(?:DAY|NIGHT|MORNING|AFTERNOON|EVENING|DUSK|DAWN|CONTINUOUS|LATER|MOMENTS LATER|SAME)\b/;
+  const TRANSITION = /^\s*(?:[A-Z ]+TO:|FADE IN:|FADE OUT\.?|FADE TO BLACK\.?)\s*$/;
+  const CHARACTER = /^\s*[A-Z][A-Z0-9 .'’-]{0,28}(?:\s*\((?:V\.O\.|O\.S\.|O\.C\.|CONT'D|CONT’D)\))?\s*$/;
+
+  /** Classifies each line of a screenplay: slug, action, character, parenthetical, dialogue, transition. */
+  function classify(ctx) {
+    const out = [];
+    let mode = null;
+    ctx.lines.forEach((l, i) => {
+      const t = l.text.trim();
+      let role;
+      if (l.kind === 'blank') {
+        mode = null;
+        role = 'blank';
+      } else if (l.kind === 'heading' || l.kind === 'note') {
+        mode = null;
+        role = l.kind;
+      } else if (SLUG.test(t)) {
+        role = 'slug';
+        mode = null;
+      } else if (TRANSITION.test(t)) {
+        role = 'transition';
+        mode = null;
+      } else if ((mode === 'dialogue' || mode === 'character') && /^\(.*\)$/.test(t)) {
+        role = 'parenthetical';
+        mode = 'dialogue';
+      } else if (mode === 'dialogue' || mode === 'character') {
+        role = 'dialogue';
+        mode = 'dialogue';
+      } else if (CHARACTER.test(t) && /[A-Z]/.test(t) && t.split(/\s+/).length <= 4 && ctx.lines[i + 1] && ctx.lines[i + 1].kind !== 'blank') {
+        role = 'character';
+        mode = 'character';
+      } else {
+        role = 'action';
+      }
+      out.push(Object.assign({}, l, { role, trimmed: t }));
+    });
+    return out;
+  }
+
+  function blocks(lines, role) {
+    const out = [];
+    let cur = null;
+    for (const l of lines) {
+      if (l.role === role) {
+        if (!cur) out.push((cur = { start: l.start, end: l.end, lines: [] }));
+        cur.end = l.end;
+        cur.lines.push(l);
+      } else if (!(role === 'dialogue' && l.role === 'parenthetical')) cur = null;
+    }
+    out.forEach((b) => (b.words = b.lines.reduce((a, l) => a + (l.text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length, 0)));
+    return out;
+  }
+
+  function within(ctx, lines, re) {
+    const hits = [];
+    for (const l of lines) hits.push(...T.findAll(ctx, new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'), l));
+    return hits;
+  }
+
+  const UNFILMABLE = /\b(thinks|thought|remembers|remembered|realizes|realised|realized|realises|knows|knew|wonders|wondered|feels|felt|decides|decided|wishes|wished|hopes|hoped|understands|understood|is reminded)\b/gi;
+  const CAMERA = /\b(we see|we hear|we watch|we follow|camera|close on|close-up|closeup|zoom(?:s)? in|pan(?:s)? to|angle on|tracking shot)\b/gi;
+
+  const checks = [
+    C.structure(),
+
+    {
+      id: 'sluglines',
+      title: 'Scene headings',
+      group: 'Format',
+      minWords: 10,
+      why: 'Every scene starts with a heading (a “slugline”) in capitals: INT. or EXT. (inside or outside), the location, and the time: INT. KITCHEN - NIGHT. It tells the whole crew where and when.',
+      run(ctx) {
+        const lines = classify(ctx);
+        const slugs = lines.filter((l) => l.role === 'slug');
+        const marks = [];
+        let ok = 0;
+        for (const l of slugs) {
+          const upper = l.trimmed === l.trimmed.toUpperCase();
+          const timed = TIME.test(l.trimmed.toUpperCase());
+          if (upper && timed) {
+            ok++;
+            marks.push(mark(l, 'good', 'Well-formed scene heading.'));
+          } else {
+            marks.push(mark(l, 'warn', `${upper ? '' : 'Write the heading in capitals. '}${timed ? '' : 'Add the time after a dash, e.g. “- NIGHT”.'}`.trim()));
+          }
+        }
+        if (!slugs.length) return { status: 'fail', summary: 'No scene heading. Start with something like INT. BUS STATION - NIGHT.', marks };
+        return {
+          status: ok === slugs.length ? 'pass' : 'warn',
+          summary: `${plural(slugs.length, 'scene')}${ok === slugs.length ? ', all headings well formed.' : `, ${slugs.length - ok} heading(s) need fixing.`}`,
+          marks,
+        };
+      },
+    },
+
+    {
+      id: 'action-lines',
+      title: 'Lean action lines',
+      group: 'Format',
+      minWords: 30,
+      why: 'Readers skim screenplays. Keep each block of action to about four lines or fewer, one image or beat per paragraph. White space makes a script fast to read.',
+      run(ctx) {
+        const b = blocks(classify(ctx), 'action');
+        const long = b.filter((x) => x.lines.length > 4 || x.words > 60);
+        return {
+          status: long.length === 0 ? 'pass' : long.length <= 1 ? 'warn' : 'fail',
+          summary: long.length ? `${plural(long.length, 'action block')} too dense.` : 'Action is broken into short, readable blocks.',
+          marks: long.map((x) => mark(x.lines[0], 'warn', `${x.words} words of action in one block. Break it at each new image.`)),
+        };
+      },
+    },
+
+    {
+      id: 'present-tense',
+      title: 'Action in present tense',
+      group: 'Format',
+      minWords: 30,
+      why: 'Screenplays happen now, on screen. Write action in the present tense: “Maya opens the door,” not “Maya opened the door.”',
+      run(ctx) {
+        const action = classify(ctx).filter((l) => l.role === 'action');
+        const hits = within(ctx, action, /\b(was|were|had|\w{3,}ed)\b/gi)
+          .filter((h) => !lex.passiveExceptions.has(h.text.toLowerCase()) && !/^(need|seed|feed|speed|bleed|breed|proceed|exceed|succeed|indeed|hundred|bed|red|sled|shed|wed|naked|wicked|sacred|kindred|rugged|ragged|jagged)$/i.test(h.text));
+        return {
+          status: hits.length === 0 ? 'pass' : hits.length <= 2 ? 'warn' : 'fail',
+          summary: hits.length ? `${plural(hits.length, 'past-tense word')} in action lines.` : 'Action is in the present tense.',
+          marks: hits.map((h) => mark(h, 'warn', `${quote(h.text)} looks like past tense. Action happens now: use the present.`)),
+        };
+      },
+    },
+
+    {
+      id: 'unfilmable',
+      title: 'Only what we can see and hear',
+      group: 'Craft',
+      minWords: 20,
+      why: 'The camera can’t film a thought. “She remembers her father” is invisible. Show it: she turns over his old watch in her hand. If it can’t be seen or heard, it isn’t in the movie.',
+      run(ctx) {
+        const action = classify(ctx).filter((l) => l.role === 'action');
+        const hits = within(ctx, action, UNFILMABLE);
+        return {
+          status: hits.length === 0 ? 'pass' : hits.length <= 1 ? 'warn' : 'fail',
+          summary: hits.length ? `${plural(hits.length, 'unfilmable')} in the action.` : 'Everything in the action can be filmed.',
+          marks: hits.map((h) => mark(h, 'bad', `${quote(h.text)} can’t be filmed. What would the audience actually see?`)),
+        };
+      },
+    },
+
+    {
+      id: 'camera-directions',
+      title: 'Leave the camera to the director',
+      group: 'Craft',
+      minWords: 20,
+      why: '“We see”, “camera pans” and “close on” tell the director how to shoot. Spec scripts avoid them. Describe what happens; the shot is implied by what you choose to show.',
+      run(ctx) {
+        const action = classify(ctx).filter((l) => l.role === 'action');
+        const hits = within(ctx, action, CAMERA);
+        return {
+          status: hits.length === 0 ? 'pass' : hits.length <= 2 ? 'warn' : 'fail',
+          summary: hits.length ? `${plural(hits.length, 'camera direction')}.` : 'No camera directions.',
+          marks: hits.map((h) => Object.assign(mark(h, 'warn', `${quote(h.text)} directs the camera. Just describe what happens.`), /^we (see|hear|watch)$/i.test(h.text) ? { fixes: [WP.checks.DELETE] } : {})),
+        };
+      },
+    },
+
+    {
+      id: 'monologues',
+      title: 'Short speeches',
+      group: 'Dialogue',
+      minWords: 30,
+      why: 'Real people talk in short bursts and interrupt each other. A speech over about 50 words stops the scene. Break it up with action or the other character’s reaction.',
+      run(ctx) {
+        const b = blocks(classify(ctx), 'dialogue');
+        if (!b.length) return { status: 'info', summary: 'No dialogue yet. Write a character name in CAPS, then their line below it.', marks: [] };
+        const long = b.filter((x) => x.words > 50);
+        return {
+          status: long.length === 0 ? 'pass' : long.length === 1 ? 'warn' : 'fail',
+          summary: long.length ? `${plural(long.length, 'speech', 'speeches')} over 50 words.` : `${plural(b.length, 'speech', 'speeches')}, all short.`,
+          marks: long.map((x) => mark(x.lines[0], 'warn', `${x.words} words without a break. Who interrupts? What does the other person do?`)),
+        };
+      },
+    },
+
+    {
+      id: 'parentheticals',
+      title: 'Few parentheticals',
+      group: 'Dialogue',
+      minWords: 30,
+      why: 'A parenthetical like (angrily) tells the actor how to say a line. Use them rarely, only when the meaning would be unclear. If the line needs (angrily), the line itself is not angry enough.',
+      run(ctx) {
+        const lines = classify(ctx);
+        const parens = lines.filter((l) => l.role === 'parenthetical');
+        const speeches = blocks(lines, 'dialogue').length || 1;
+        const marks = parens.filter((l) => /\(\s*\w+ly\s*\)/i.test(l.trimmed)).map((l) => mark(l, 'warn', 'An adverb parenthetical. Let the line and the actor carry the emotion.'));
+        return {
+          status: marks.length === 0 && parens.length <= speeches / 3 ? 'pass' : 'warn',
+          summary: `${plural(parens.length, 'parenthetical')} across ${plural(speeches, 'speech', 'speeches')}.`,
+          marks,
+        };
+      },
+    },
+
+    {
+      id: 'on-the-nose',
+      title: 'Subtext, not on-the-nose',
+      group: 'Dialogue',
+      minWords: 30,
+      why: 'In good scenes people rarely say exactly what they feel. “I am so angry at you” is on-the-nose. Let characters talk around the feeling (“You took the last of the milk. Again.”) and the audience will read the anger underneath.',
+      run(ctx) {
+        const dialogue = classify(ctx).filter((l) => l.role === 'dialogue');
+        const re = new RegExp("\\b(i(?:'m|’m| am) (?:so |really |very |just )?(?:" + lex.emotions.join('|') + ")|i feel (?:like )?(?:so |really )?\\w+|i love you|i hate you)\\b", 'gi');
+        const hits = within(ctx, dialogue, re);
+        return {
+          status: hits.length === 0 ? 'pass' : hits.length <= 1 ? 'warn' : 'fail',
+          summary: hits.length ? `${plural(hits.length, 'on-the-nose line')}.` : 'Characters don’t announce their feelings.',
+          marks: hits.map((h) => mark(h, 'warn', `${quote(h.text)} states the feeling. What would they say instead, to hide it?`)),
+        };
+      },
+    },
+
+    {
+      id: 'page-count',
+      title: 'Page count',
+      group: 'Format',
+      minWords: 1,
+      why: 'In standard format, one screenplay page is roughly one minute of screen time, about 55 lines. A short film runs 5–15 pages; a TV episode 30–60; a feature 90–120.',
+      run(ctx) {
+        const lines = classify(ctx).filter((l) => l.role !== 'heading' && l.role !== 'note');
+        const pages = lines.length / 55;
+        const dlg = lines.filter((l) => l.role === 'dialogue').length;
+        const act = lines.filter((l) => l.role === 'action').length;
+        return {
+          status: 'info',
+          summary: `≈ ${pages < 1 ? 'under 1 page' : pages.toFixed(1) + ' pages'} (≈ ${Math.max(1, Math.round(pages))} min on screen). ${dlg} dialogue lines, ${act} action lines.`,
+          marks: [],
+        };
+      },
+    },
+
+    C.cliches(),
+  ];
+
+  const frameworks = [
+    {
+      id: 'scene-turn',
+      name: 'Scene: Goal · Conflict · Turn',
+      summary: 'Every scene needs a character who wants something, someone or something in the way, and a turn that changes the situation by the end.',
+      bestFor: 'Any single scene',
+      beats: [
+        { name: 'Setup', hint: 'Scene heading, then two or three lines of action: where we are and who is here.' },
+        { name: 'Goal', hint: 'What does the main character want in this scene? Show it in action or dialogue.' },
+        { name: 'Conflict', hint: 'Who or what stands in the way? Let them clash.' },
+        { name: 'Turn', hint: 'Something changes: a reveal, a decision, a reversal. The scene must end in a different place than it started.' },
+        { name: 'Exit', hint: 'Get out fast. End on an image or a line, not on goodbyes.', min: 5 },
+      ],
+      example: `## Setup\nINT. LAUNDROMAT - NIGHT\n\nFluorescent hum. One dryer spins. MAYA (30s, scrubs, exhausted) folds a child's T-shirt.\n\n## Goal\nShe checks her phone. 11:52. She folds faster.\n\n## Conflict\nThe OWNER (60s) flips the sign to CLOSED and rattles his keys.\n\nOWNER\nMidnight means midnight.\n\nMAYA\nEight minutes. Please. It's his school uniform.\n\n## Turn\nThe owner looks at the tiny shirt. He pulls up a plastic chair, sits, and starts folding socks.\n\n## Exit\nThe dryer buzzes. Neither of them looks up.`,
+    },
+    {
+      id: 'short-film',
+      name: 'Short film (three acts)',
+      summary: 'A complete story in 5–10 pages: a strong opening image, one problem, one escalation, a climax and a closing image that mirrors the start.',
+      bestFor: 'Short films, film-school exercises',
+      beats: [
+        { name: 'Opening image', hint: 'One visual that shows the character’s world and problem.' },
+        { name: 'Inciting incident', hint: 'The event that starts the story.' },
+        { name: 'Complications', hint: 'Things get harder. Keep it to one or two escalations; a short has no time for subplots.' },
+        { name: 'Climax', hint: 'The character makes a choice that costs something.' },
+        { name: 'Final image', hint: 'A visual that mirrors the opening image, showing the change.' },
+      ],
+      example: `## Opening image\nEXT. ROOFTOP - DAWN\n\nOLD MAN TAN (70s) feeds a single pigeon. The rest of the coop is empty.\n\n## Inciting incident\nA NOTICE taped to the coop door: BUILDING SOLD. VACATE BY FRIDAY.\n\n## Complications\nINT. STAIRWELL - DAY\n\nTan knocks on doors. Nobody wants a pigeon. A TEENAGER (15) laughs at him, then looks at the bird a little too long.\n\n## Climax\nEXT. ROOFTOP - FRIDAY\n\nTan opens the coop. The pigeon doesn't move. He lifts it, kisses its head, and throws it into the sky.\n\n## Final image\nEXT. ANOTHER ROOFTOP - DAWN\n\nThe teenager scatters seed. One pigeon lands.`,
+    },
+    {
+      id: 'two-hander',
+      name: 'Argument scene',
+      summary: 'Two characters who want opposite things, a conflict that escalates, and a reveal that changes the fight.',
+      bestFor: 'Dialogue practice, drama, comedy',
+      beats: [
+        { name: 'Want A', hint: 'Character A’s goal, shown in their first line or action.' },
+        { name: 'Want B', hint: 'Character B wants the opposite.' },
+        { name: 'Escalation', hint: 'Each line raises the stakes. Nobody gives in yet.' },
+        { name: 'Reveal', hint: 'The real reason for the fight comes out.' },
+        { name: 'Button', hint: 'A final line or action that closes the scene with a punch.', min: 4 },
+      ],
+      example: `## Want A\nINT. CAR - NIGHT\n\nJONAH (17) grips the wheel. Learner plates. His MOM (45) grips the door handle.\n\nJONAH\nI'm taking the highway.\n\n## Want B\nMOM\nYou are taking the parking lot. Again.\n\n## Escalation\nJONAH\nI've done the parking lot eleven times.\n\nMOM\nAnd you hit the cart return twice.\n\nJONAH\nThe cart return moved.\n\n## Reveal\nMOM\nYour dad learned on that highway.\n\nJonah lets go of the wheel.\n\n## Button\nJONAH\nThen he can teach me.\n\nSilence. Mom unclips her seatbelt and opens the door.\n\nMOM\nScoot over.`,
+    },
+    {
+      id: 'cold-open',
+      name: 'Cold open (TV)',
+      summary: 'The scene before the opening titles: drop us into a moment, complicate it fast, and end on a shock or a laugh that makes us stay.',
+      bestFor: 'TV pilots, web series',
+      beats: [
+        { name: 'Hook moment', hint: 'Start in the middle of something strange or urgent.' },
+        { name: 'Complication', hint: 'One twist that makes it worse or weirder.' },
+        { name: 'Sting', hint: 'The shock, laugh or question that ends the scene.' },
+        { name: 'Smash cut', hint: 'SMASH CUT TO: the title, or a contrasting scene.', min: 2 },
+      ],
+      example: `## Hook moment\nINT. MUSEUM - NIGHT\n\nA SECURITY GUARD (50s) dances alone to a radio between dinosaur skeletons.\n\n## Complication\nThe T. rex's tail bone falls with a CRACK. He freezes. Slowly, he picks it up and tries to fit it back on. It doesn't fit.\n\n## Sting\nA small voice behind him:\n\nCHILD (O.S.)\nYou're doing it wrong.\n\nHe turns. A GIRL (8) in pajamas sits inside the ribcage.\n\n## Smash cut\nSMASH CUT TO:`,
+    },
+  ];
+
+  WP.genres.push({
+    id: 'screenplay',
+    name: 'Screenplay',
+    tagline: 'Scenes for film, TV and web series',
+    checks,
+    frameworks,
+    prompts: [
+      'Write a scene where two people share an umbrella and shouldn’t.',
+      'Two siblings clean out a parent’s fridge. Write the scene without anyone mentioning the parent.',
+      'A job interview where the interviewer is more nervous than the candidate.',
+      'Write a scene that takes place entirely inside a parked car.',
+      'A first date at a restaurant where the waiter is the date’s ex.',
+      'A character must return something they stole. Write the scene.',
+      'Write a cold open for a TV show set in a hospital at 4 a.m.',
+      'Two strangers wait for the same delayed train. One of them is lying.',
+      'Write a scene where the most important line is never said.',
+      'A kid tries to return a pet to the shop.',
+      'Write a two-page scene with only one line of dialogue.',
+    ],
+    generator: {
+      template: 'INT./EXT. {place} - {time}. {a} wants {want}, but {b} {obstacle}.',
+      parts: {
+        place: ['A 24-HOUR DINER', 'A HOSPITAL ELEVATOR', 'A SCHOOL BUS', 'A ROOFTOP', 'A DRIVING TEST CENTER', 'A FERRY DECK', 'A PET SHOP'],
+        time: ['NIGHT', 'DAWN', 'DAY', 'LATE AFTERNOON'],
+        a: ['A nervous groom', 'A retired spy', 'A teenage chess champion', 'A tired nurse', 'A celebrity in disguise', 'A new security guard'],
+        want: ['to leave without being seen', 'an apology', 'their money back', 'one honest answer', 'to win, just once', 'to get home'],
+        b: ['their mother', 'an old friend', 'a stubborn clerk', 'a child', 'their boss', 'a stranger'],
+        obstacle: ['won’t stop talking', 'knows their secret', 'is locking the doors', 'needs a favor first', 'has the same goal', 'won’t look at them'],
+      },
+    },
+    nudges: [
+      'What does your main character want in this scene, right now?',
+      'Can the scene start later? Cut the first three lines and see.',
+      'Replace a line of dialogue with an action that says the same thing.',
+      'What is your character hiding from the other person?',
+      'What can the audience see that tells them how someone feels?',
+      'How is the situation different at the end of the scene?',
+      'Give the other character a strong want too.',
+      'What object in the room could become important?',
+    ],
+    guide: {
+      intro: 'A screenplay is a blueprint for something people will watch, not read. You can only write what can be seen and heard. Scenes are built from wants and conflict, and dialogue works best when characters don’t say what they mean.',
+      principles: [
+        { title: 'Show, because you can’t tell', body: 'There is no narrator inside a character’s head. Thoughts, memories and feelings must become actions, objects and dialogue.' },
+        { title: 'Enter late, leave early', body: 'Start each scene as close to the conflict as possible and leave as soon as it turns. Skip hellos and goodbyes.' },
+        { title: 'Every scene turns', body: 'Something must change between the start and end of a scene. If nothing changes, cut it.' },
+        { title: 'Subtext', body: 'People talk around what they feel. The audience enjoys reading the real meaning underneath.' },
+        { title: 'Lean action', body: 'Action lines are short, present tense, and visual. One image per paragraph. White space is your friend.' },
+        { title: 'Format is courtesy', body: 'Scene headings in caps (INT. KITCHEN - NIGHT), character names in caps above their lines, few parentheticals. Correct format lets readers focus on the story.' },
+        { title: 'Introduce characters clearly', body: 'The first time a character appears, write their name in CAPS with an age and one telling detail: MAYA (30s, scrubs, exhausted).' },
+      ],
+      mistakes: [
+        'Writing thoughts and backstory in the action lines.',
+        'Characters announcing their feelings (“I am so angry”).',
+        'Long paragraphs of action that read like a novel.',
+        'Camera directions (“we see”, “close on”) in a spec script.',
+        'Scenes that start with greetings and small talk.',
+        'Parentheticals on every line.',
+      ],
+      glossary: [
+        { term: 'Slugline', def: 'The scene heading: INT./EXT., location, time of day.' },
+        { term: 'Action', def: 'The description of what we see and hear, in present tense.' },
+        { term: 'Parenthetical', def: 'A short direction in brackets under a character name, like (whispering).' },
+        { term: 'V.O. / O.S.', def: 'Voice-over (narration) / off-screen (in the scene but not visible).' },
+        { term: 'Spec script', def: 'A script written on speculation, to sell or to show your skill.' },
+        { term: 'Subtext', def: 'What a character means but doesn’t say.' },
+        { term: 'Beat', def: 'A small unit of action or a pause in a scene.' },
+        { term: 'Cold open', def: 'A scene that runs before a TV show’s opening titles.' },
+      ],
+    },
+    sample: {
+      title: 'Example: The returned ring',
+      framework: 'scene-turn',
+      text: `> Example draft with common mistakes. Character names go in CAPS on their own line, with their dialogue below.
+
+int. coffee shop
+
+We see LENA (20s) sitting at a table by the window. She was nervous and she kept looking at the door, because she remembers how the last time she saw Tom he left without saying goodbye, and she thinks about whether he will even come today or not.
+
+TOM (20s) enters. He sits down across from her.
+
+TOM
+(nervously)
+Hi.
+
+LENA
+I am so angry at you. You left without a word and I waited for three hours at the station, and then I went home and I cried, and my sister had to come over and sit with me all night, and I still don't understand why you did it, or what I did wrong, or why you never called.
+
+Tom slides a small box across the table. Lena opens it. Her mother's ring.
+
+LENA
+You kept it.
+
+TOM
+You told me to.`,
+    },
+  });
+
+  WP.screenplay = { classify };
+})(window.WP = window.WP || {});
+
 // ---- js/genres/drills.js
 /*
  * Practice drills: one rule at a time. Each drill opens a short flawed passage
@@ -4411,6 +5348,82 @@ Download Leafy today and get your first month free.`,
         text: 'I walked down to the\nedge of the water and\nwatched the light go out of\nthe sky over a\nharbor full of boats',
         hint: 'End each line on the word you want the reader to feel: a noun or a verb.',
         model: 'I walked down to the edge\nof the water and watched\nthe light go out of the sky\nover a harbor full of boats',
+      },
+    ],
+    speech: [
+      {
+        id: 'sp-open',
+        title: 'Cut the formal opening',
+        rule: 'speech-opening',
+        task: 'Rewrite the first line so it grabs the room. Move the thank-you later.',
+        text: 'Thank you so much for having me here today. My name is Dana and today I am going to talk about why everyone should learn to swim.',
+        hint: 'Start with a story, a question or a striking fact. You can thank the host in your second paragraph.',
+        model: 'How long could you stay afloat if your boat tipped over right now? I couldn’t manage thirty seconds until I was twenty-six. Thank you for having me. Today, I want to convince you to learn to swim.',
+      },
+      {
+        id: 'sp-signpost',
+        title: 'Signpost your points',
+        rule: 'signposts',
+        task: 'Add signposts so a listener always knows which point you are on.',
+        text: 'Reading every day makes you calmer. It gives you better words when you speak. It helps you sleep if you read instead of scrolling. You can start with ten minutes. Pick a book you actually want to read, not one you think you should read. Keep it by your bed so it is the last thing you see.',
+        hint: 'Number your reasons out loud: “First… Second… Finally…”. Use “Here’s why” or “So how do you start?” to move between parts.',
+        model: 'Here’s why you should read every day. First, it makes you calmer. Second, it gives you better words when you speak. Finally, it helps you sleep, if you read instead of scrolling. So how do you start? Ten minutes. Pick a book you actually want to read. Keep it by your bed, so it is the last thing you see.',
+      },
+      {
+        id: 'sp-triad',
+        title: 'Find the rule of three',
+        rule: 'triads',
+        task: 'Rewrite the key sentence as a group of three.',
+        text: 'Our team has worked hard this year and I think we should all feel good about what we did, because it was a lot of effort and long hours and we did it together even when it was difficult.',
+        hint: 'Pull out three parallel phrases: three things you did, three qualities, three moments.',
+        model: 'This year our team worked late, worked weekends, and worked together. We should be proud of every hour.',
+      },
+      {
+        id: 'sp-end',
+        title: 'Land the ending',
+        rule: 'speech-ending',
+        task: 'Replace the fizzling ending with a closing line that calls the audience to act or remember.',
+        text: 'So that is my story about how volunteering at the animal shelter changed my life and why I think it could change yours too. So yeah, that’s all I have. Any questions?',
+        hint: 'End on your message or a call to action, then stop. Take questions after the closing line.',
+        model: 'That shelter gave me more than I ever gave it. This Saturday, they need ten more volunteers. Join me. Bring a friend, and bring old towels. The dogs will remember you.',
+      },
+    ],
+    screenplay: [
+      {
+        id: 'sc-slug',
+        title: 'Fix the scene heading',
+        rule: 'sluglines',
+        task: 'Rewrite the scene heading in standard format: INT. or EXT., location, and time, in capitals.',
+        text: 'int. kitchen\n\nRAJ (40s) stirs a pot that is clearly burning.',
+        hint: 'Format: INT. LOCATION - TIME, all capitals. For example: INT. KITCHEN - NIGHT.',
+        model: 'INT. RAJ’S KITCHEN - NIGHT\n\nRAJ (40s) stirs a pot that is clearly burning.',
+      },
+      {
+        id: 'sc-film',
+        title: 'Make it filmable',
+        rule: 'unfilmable',
+        task: 'Rewrite the action so everything in it can be seen or heard. No thoughts or memories.',
+        text: 'INT. BEDROOM - NIGHT\n\nNOOR (16) sits on her bed. She remembers the day her grandmother taught her to sew and she thinks about how much she misses her.',
+        hint: 'Turn the memory into an object or an action: something she holds, looks at or does.',
+        model: 'INT. BEDROOM - NIGHT\n\nNOOR (16) sits on her bed, a half-finished quilt across her knees. She threads a needle on the third try, the way her grandmother showed her. Her hands stop. She holds the quilt to her face.',
+      },
+      {
+        id: 'sc-tense',
+        title: 'Action in the present',
+        rule: 'present-tense',
+        task: 'Rewrite the action in the present tense.',
+        text: 'EXT. PARK - DAY\n\nMarcus walked to the bench and sat down. He opened a letter and his hands were shaking.',
+        hint: '“walked” → “walks”, “were shaking” → “shake”.',
+        model: 'EXT. PARK - DAY\n\nMARCUS (30s) walks to the bench and sits. He opens a letter. His hands shake.',
+      },
+      {
+        id: 'sc-subtext',
+        title: 'Say it without saying it',
+        rule: 'on-the-nose',
+        task: 'Rewrite the dialogue so neither character names their feeling, but we still understand it.',
+        text: 'INT. KITCHEN - MORNING\n\nANNA\nI am so angry that you forgot my birthday.\n\nBEN\nI feel guilty about it.',
+        hint: 'Let them talk about something small (the cake, the date, the milk) while the real feeling shows underneath.',
+        model: 'INT. KITCHEN - MORNING\n\nAnna sets a single cupcake on the table. One candle. She lights it herself.\n\nANNA\nThe bakery was out of the big ones.\n\nBEN\nIs that... today?\n\nANNA\nIt was yesterday.',
       },
     ],
     copy: [
@@ -5074,6 +6087,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       init(api);
     },
     render,
+    isReady: () => C.status === 'ready',
+    askAbout(q) {
+      if (C.status !== 'ready' || C.busy) return false;
+      ask(q);
+      return true;
+    },
     reset() {
       C.rewrite = null;
       C.ideas = null;
@@ -5139,6 +6158,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     goal: 0,
     days: {},
     drillsDone: [],
+    challenges: {},
+    toured: false,
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
 
@@ -5280,6 +6301,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     editor.setMarks(state.allMarks);
     trackWords(d.id, ctx.wordCount);
     checkDrill(d, results);
+    checkChallenge(d, ctx.wordCount);
+    autoVersion(d, score, ctx.wordCount);
     renderChecks();
     renderStatus();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
@@ -5512,6 +6535,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         <div id="progressBox"></div>
       </section>
 
+      ${renderChallengeCard(g)}
+
       <section class="section">
         <p class="eyebrow">Prompt · ${esc(g.name)}</p>
         <div class="idea-card">
@@ -5560,6 +6585,236 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         </label>
       </section>`;
     renderProgress();
+  }
+
+  /* ---------- daily challenge ---------- */
+
+  function hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    return h >>> 0;
+  }
+
+  function todaysChallenge(g) {
+    const key = dayKey();
+    const h = hash(key + ':' + g.id);
+    return { key, prompt: g.prompts[h % g.prompts.length], fw: g.frameworks[(h >>> 8) % g.frameworks.length], words: 100 + ((h >>> 16) % 3) * 50 };
+  }
+
+  function renderChallengeCard(g) {
+    const c = todaysChallenge(g);
+    const done = prefs.challenges[c.key + ':' + g.id];
+    return `<section class="section">
+        <p class="eyebrow">Today’s challenge · ${esc(g.name)}</p>
+        <div class="idea-card challenge ${done ? 'done' : ''}">
+          <p class="idea-text">${esc(c.prompt)}</p>
+          <p class="small muted">Use the <b>${esc(c.fw.name)}</b> framework and write at least <b>${c.words}</b> words. A new challenge arrives tomorrow.</p>
+          <div class="btn-row">
+            ${done ? '<span class="drill-done">Done today ✓</span><button class="btn" type="button" data-act="challenge">Open it</button>' : '<button class="btn btn-primary" type="button" data-act="challenge">Start today’s challenge</button>'}
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function startChallenge() {
+    const g = genre();
+    const c = todaysChallenge(g);
+    let d = state.docs.find((x) => x.challenge && x.challenge.key === c.key && x.genre === g.id);
+    if (!d) {
+      const outline = c.fw.structure === false
+        ? c.fw.beats.map((b) => `> ${b.name}: ${b.hint}`).join('\n') + '\n\n'
+        : c.fw.beats.map((b) => `## ${b.name}\n> ${b.hint}\n\n`).join('');
+      d = newDoc(g.id, {
+        title: `Challenge: ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`,
+        framework: c.fw.id,
+        text: `> Today’s challenge: ${c.prompt}\n> Write at least ${c.words} words using the ${c.fw.name} framework.\n\n${outline}`,
+        challenge: { key: c.key, words: c.words },
+      });
+      persist(true);
+    }
+    openDoc(d.id);
+    closeDrawers();
+    const ta = $('editor');
+    const firstHint = ta.value.search(/\n> (?!Today|Write at least)[^\n]*\n/);
+    const pos = firstHint >= 0 ? ta.value.indexOf('\n', firstHint + 1) + 1 : ta.value.length;
+    ta.focus();
+    ta.setSelectionRange(pos, pos);
+  }
+
+  function checkChallenge(d, words) {
+    if (!d.challenge) return;
+    const id = d.challenge.key + ':' + d.genre;
+    if (prefs.challenges[id] || words < d.challenge.words) return;
+    prefs.challenges[id] = true;
+    savePrefs();
+    toast(`Challenge complete: ${words} words. Come back tomorrow for a new one.`);
+    if (prefs.leftTab === 'ideas') renderIdeas();
+  }
+
+  /* ---------- version history ---------- */
+
+  const VERSION_GAP = 10 * 60 * 1000;
+  const MAX_VERSIONS = 30;
+
+  function pushVersion(d, label) {
+    d.versions = d.versions || [];
+    const last = d.versions[d.versions.length - 1];
+    if (last && last.text === d.text) return false;
+    const ctx = T.parse(d.text, { framework: d.framework, genre: d.genre });
+    ctx.frameworkDef = genreById(d.genre).frameworks.find((f) => f.id === d.framework) || null;
+    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx).score;
+    d.versions.push({ at: Date.now(), text: d.text, words: ctx.wordCount, score, label: label || '' });
+    if (d.versions.length > MAX_VERSIONS) d.versions.splice(0, d.versions.length - MAX_VERSIONS);
+    persist();
+    return true;
+  }
+
+  function autoVersion(d, score, words) {
+    if (words < 20) return;
+    const vs = d.versions || [];
+    const last = vs[vs.length - 1];
+    if (!last) {
+      d.versions = [{ at: Date.now(), text: d.text, words, score, label: 'First saved' }];
+      persist();
+    } else if (Date.now() - last.at > VERSION_GAP && last.text !== d.text) {
+      pushVersion(d, 'Auto-saved');
+    }
+  }
+
+  function renderHistory(d) {
+    const vs = (d.versions || []).slice().reverse();
+    const points = (d.versions || []).map((v) => v.score).filter((x) => x != null).concat(state.score != null ? [state.score] : []);
+    let spark = '';
+    if (points.length >= 2) {
+      const W = 260;
+      const H = 48;
+      const x = (i) => (i / (points.length - 1)) * (W - 8) + 4;
+      const y = (v) => H - 4 - (v / 100) * (H - 8);
+      const pts = points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const lastI = points.length - 1;
+      spark = `<svg class="score-spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Score across versions, from ${points[0]} to ${points[lastI]}">
+        <line class="grid" x1="0" x2="${W}" y1="${y(50)}" y2="${y(50)}"></line>
+        <polyline points="${pts}"></polyline>
+        ${points.map((v, i) => `<circle class="${i === lastI ? 'end' : 'pt'}" cx="${x(i)}" cy="${y(v)}" r="${i === lastI ? 4.5 : 2.5}"></circle><rect class="bar-hit" x="${x(i) - 8}" y="0" width="16" height="${H}" data-tip="${i === lastI ? 'Now' : 'Version ' + (i + 1)}: score ${v}"></rect>`).join('')}
+      </svg>
+      <p class="small muted">Score ${points[0]} → <b>${points[lastI]}</b> across ${points.length - 1} saved ${points.length - 1 === 1 ? 'version' : 'versions'}.</p>`;
+    }
+    return `<section class="section">
+        <p class="eyebrow">History of this draft</p>
+        ${spark}
+        <div class="btn-row"><button class="btn" type="button" data-act="save-version">Save a version now</button></div>
+        ${vs.length ? `<ul class="version-list">${vs.map((v) => {
+          const i = d.versions.indexOf(v);
+          return `<li class="version">
+            <span class="version-meta"><b>${esc(new Date(v.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</b>
+            <span>${v.words} words${v.score != null ? ` · score ${v.score}` : ''}${v.label ? ` · ${esc(v.label)}` : ''}</span></span>
+            <span class="btn-row"><button class="btn btn-small" type="button" data-compare="${i}">Compare</button><button class="btn btn-small" type="button" data-restore="${i}">Restore</button></span>
+          </li>`;
+        }).join('')}</ul>` : '<p class="small muted">Versions are saved automatically every 10 minutes while you write. Save one yourself before a big rewrite.</p>'}
+      </section>`;
+  }
+
+  function compareVersion(i) {
+    const d = doc();
+    const v = d.versions[i];
+    const r = WP.diff(v.text, d.text, esc);
+    openModal(`Changes since ${new Date(v.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`, `
+      <p class="small muted"><ins>${r.added} words added</ins> · <del>${r.removed} removed</del> · score ${v.score != null ? v.score : '–'} → ${state.score != null ? state.score : '–'}</p>
+      <pre class="diff">${r.html || '<span class="muted">No changes.</span>'}</pre>`);
+  }
+
+  function restoreVersion(i) {
+    const d = doc();
+    const v = d.versions[i];
+    pushVersion(d, 'Before restoring');
+    const ta = $('editor');
+    ta.focus();
+    ta.setSelectionRange(0, ta.value.length);
+    editor.insert(v.text);
+    ta.setSelectionRange(0, 0);
+    analyze();
+    renderDrafts();
+    toast('Version restored. Your previous text was saved in History, and Ctrl+Z (⌘Z) undoes this.');
+  }
+
+  /* ---------- modal + tour ---------- */
+
+  function openModal(title, html) {
+    $('modalTitle').textContent = title;
+    $('modalBody').innerHTML = html;
+    $('modal').hidden = false;
+    $('modalClose').focus();
+  }
+
+  function closeModal() {
+    $('modal').hidden = true;
+  }
+
+  const TOUR = [
+    { title: 'Welcome to your writing playground', body: 'A place to practice writing with guidance. Pick a kind of writing, use a proven structure, and get feedback as you type. This tour takes 30 seconds.' },
+    { target: '#genreTabs', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
+    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule.' },
+    { target: '#sheet', title: '3. Write, and watch the highlights', body: 'Green means you’re following a rule, amber means take a look, red means it breaks a rule. Click a highlight to see why and fix it in one click. Listen reads your draft aloud.' },
+    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach (inside Claude) reviews your draft like an editor. Learn explains the basics.' },
+    { title: 'Start small', body: 'The best first step is a five-minute win. Try one drill, or take today’s challenge.', final: true },
+  ];
+  let tourStep = -1;
+
+  function startTour() {
+    tourStep = 0;
+    renderTour();
+  }
+
+  function endTour() {
+    tourStep = -1;
+    document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
+    $('tour').hidden = true;
+    prefs.toured = true;
+    savePrefs();
+  }
+
+  function renderTour() {
+    document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
+    const step = TOUR[tourStep];
+    if (!step) return endTour();
+    const narrow = window.matchMedia('(max-width: 960px)').matches;
+    if (step.side && !narrow) {
+      if (step.side === 'left') prefs.showLeft = true;
+      else prefs.showRight = true;
+      prefs.focus = false;
+      applyLayout();
+    }
+    const target = step.target && document.querySelector(step.target);
+    if (target && target.offsetParent !== null && !(narrow && step.side)) target.classList.add('tour-target');
+    $('tour').innerHTML = `
+      <p class="eyebrow">${tourStep + 1} of ${TOUR.length}</p>
+      <h3>${esc(step.title)}</h3>
+      <p>${esc(step.body)}</p>
+      <div class="btn-row">
+        ${step.final
+          ? '<button class="btn btn-primary" type="button" data-tour="drill">Try a drill</button><button class="btn" type="button" data-tour="challenge">Today’s challenge</button><button class="btn btn-quiet" type="button" data-tour="end">Just write</button>'
+          : `${tourStep > 0 ? '<button class="btn btn-quiet" type="button" data-tour="back">Back</button>' : '<button class="btn btn-quiet" type="button" data-tour="end">Skip</button>'}<button class="btn btn-primary" type="button" data-tour="next">${tourStep === 0 ? 'Show me' : 'Next'}</button>`}
+      </div>`;
+    $('tour').hidden = false;
+    $('tour').querySelector('.btn-primary').focus();
+  }
+
+  /* ---------- ask the coach ---------- */
+
+  function askCoachAbout(m) {
+    const text = $('editor').value.slice(m.start, m.end).replace(/\s+/g, ' ').trim().slice(0, 300);
+    const q = `In my draft, the "${m.checkTitle}" rule flags this: "${text}". The checker says: ${m.note} Explain in simple words why this is a problem in my ${genre().name.toLowerCase()} piece, and show me two better ways to write it.`;
+    hideFixCard();
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left');
+      $('layout').classList.add('show-right');
+    } else {
+      prefs.showRight = true;
+      prefs.focus = false;
+    }
+    setTab('right', 'coach');
+    applyLayout();
+    WP.coach.askAbout(q);
   }
 
   /* ---------- Practice pane ---------- */
@@ -5746,6 +7001,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         <ul class="draft-list">${items}</ul>
         <p class="small muted">Drafts are saved in this browser only. Copy or download anything you want to keep elsewhere.</p>
       </section>
+      ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
         <div class="btn-row">
@@ -6003,6 +7259,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       <section class="section">
         <p class="eyebrow">${esc(g.name)} basics</p>
         <p class="lead">${esc(gd.intro)}</p>
+        <div class="btn-row"><button class="btn" type="button" data-act="tour">Take the tour of this page</button></div>
       </section>
       <section class="section">
         <p class="eyebrow">Core principles</p>
@@ -6138,7 +7395,9 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const ta = $('editor');
     const pos = ta.selectionStart;
     if (ta.selectionEnd !== pos) return hideFixCard();
-    const m = editor.marksAt(pos).filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
+    const here = editor.marksAt(pos).filter((x) => x.level !== 'info' || x.fixes);
+    const m = here.filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0]
+      || here.filter((x) => x.level !== 'good').sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
     if (!m) return hideFixCard();
     state.fixMark = m;
     const card = $('fixCard');
@@ -6146,7 +7405,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       <p class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</p>
       <p>${esc(m.note)}</p>
       <div class="btn-row">
-        ${m.fixes.map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        ${(m.fixes || []).map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        ${WP.coach.isReady() ? '<button class="btn" type="button" data-card-coach>Ask the coach</button>' : ''}
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
@@ -6348,12 +7608,67 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       const b = e.target.closest('button');
       if (!b) return;
       if (b.hasAttribute('data-card-close')) return hideFixCard();
+      if (b.hasAttribute('data-card-coach') && state.fixMark) return askCoachAbout(state.fixMark);
       if (b.dataset.cardFix && state.fixMark) applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
     });
     document.addEventListener('mousedown', (e) => {
       if (!e.target.closest('#fixCard') && e.target.id !== 'editor') hideFixCard();
     });
     $('desk').addEventListener('scroll', placeFixCard, { passive: true });
+
+    $('modalClose').addEventListener('click', closeModal);
+    $('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') closeModal();
+    });
+    $('tour').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tour]');
+      if (!b) return;
+      const a = b.dataset.tour;
+      if (a === 'next') {
+        tourStep++;
+        renderTour();
+      } else if (a === 'back') {
+        tourStep--;
+        renderTour();
+      } else if (a === 'end') endTour();
+      else if (a === 'drill') {
+        endTour();
+        const first = drillsFor(genre())[0];
+        if (window.matchMedia('(max-width: 960px)').matches) $('layout').classList.add('show-left');
+        setTab('left', 'practice');
+        applyLayout();
+        if (first) startDrill(first.id);
+      } else if (a === 'challenge') {
+        endTour();
+        startChallenge();
+      }
+    });
+    $('pane-learn').addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="tour"]')) {
+        closeDrawers();
+        startTour();
+      }
+    });
+    const chartTip = (pane) => {
+      pane.addEventListener('mousemove', (e) => {
+        const hit = e.target.closest && e.target.closest('.bar-hit');
+        const tip = $('tooltip');
+        if (!hit) {
+          if (tip.dataset.src === 'chart') tip.hidden = true;
+          return;
+        }
+        tip.textContent = hit.dataset.tip;
+        tip.dataset.src = 'chart';
+        tip.hidden = false;
+        const r = hit.getBoundingClientRect();
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 12, Math.max(12, r.left + r.width / 2 - tip.offsetWidth / 2)) + 'px';
+        tip.style.top = Math.max(12, r.top - tip.offsetHeight - 8) + 'px';
+      });
+      pane.addEventListener('mouseleave', () => {
+        if ($('tooltip').dataset.src === 'chart') $('tooltip').hidden = true;
+      });
+    };
+    chartTip($('pane-drafts'));
 
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');
@@ -6420,7 +7735,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       } else if (act === 'use-nudge') {
         insertNote(state.nudge);
         toast('Question added as a note. Answer it on the next line.');
-      } else if (act === 'sprint') return startSprint(Number(b.dataset.min));
+      } else if (act === 'challenge') return startChallenge();
+      else if (act === 'sprint') return startSprint(Number(b.dataset.min));
       else if (act === 'stop-sprint') return stopSprint(false);
       renderIdeas();
     });
@@ -6457,6 +7773,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         $('docTitle').focus();
       } else if (t.dataset.act === 'copy') copyText();
       else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
+      else if (t.dataset.act === 'save-version') {
+        if (pushVersion(doc(), 'Saved by you')) toast('Version saved.');
+        else toast('This version is already saved. Keep writing and save again.');
+        renderDrafts();
+      } else if (t.dataset.compare) compareVersion(Number(t.dataset.compare));
+      else if (t.dataset.restore) restoreVersion(Number(t.dataset.restore));
     });
 
     $('pane-checks').addEventListener('click', (e) => {
@@ -6536,6 +7858,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');
+      } else if (e.key === 'Escape' && !$('modal').hidden) {
+        closeModal();
+      } else if (e.key === 'Escape' && tourStep >= 0) {
+        endTour();
       } else if (e.key === 'Escape' && state.fixMark) {
         hideFixCard();
       } else if (e.key === 'Escape' && state.spotlight) {
@@ -6567,6 +7893,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     openDoc(first.id);
     applyLayout();
     persist(true);
+    if (!prefs.toured) setTimeout(startTour, 500);
   }
 
   boot();

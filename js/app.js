@@ -52,6 +52,8 @@
     goal: 0,
     days: {},
     drillsDone: [],
+    challenges: {},
+    toured: false,
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
 
@@ -193,6 +195,8 @@
     editor.setMarks(state.allMarks);
     trackWords(d.id, ctx.wordCount);
     checkDrill(d, results);
+    checkChallenge(d, ctx.wordCount);
+    autoVersion(d, score, ctx.wordCount);
     renderChecks();
     renderStatus();
     if (prefs.rightTab === 'frameworks') renderFrameworks();
@@ -425,6 +429,8 @@
         <div id="progressBox"></div>
       </section>
 
+      ${renderChallengeCard(g)}
+
       <section class="section">
         <p class="eyebrow">Prompt · ${esc(g.name)}</p>
         <div class="idea-card">
@@ -473,6 +479,236 @@
         </label>
       </section>`;
     renderProgress();
+  }
+
+  /* ---------- daily challenge ---------- */
+
+  function hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    return h >>> 0;
+  }
+
+  function todaysChallenge(g) {
+    const key = dayKey();
+    const h = hash(key + ':' + g.id);
+    return { key, prompt: g.prompts[h % g.prompts.length], fw: g.frameworks[(h >>> 8) % g.frameworks.length], words: 100 + ((h >>> 16) % 3) * 50 };
+  }
+
+  function renderChallengeCard(g) {
+    const c = todaysChallenge(g);
+    const done = prefs.challenges[c.key + ':' + g.id];
+    return `<section class="section">
+        <p class="eyebrow">Today’s challenge · ${esc(g.name)}</p>
+        <div class="idea-card challenge ${done ? 'done' : ''}">
+          <p class="idea-text">${esc(c.prompt)}</p>
+          <p class="small muted">Use the <b>${esc(c.fw.name)}</b> framework and write at least <b>${c.words}</b> words. A new challenge arrives tomorrow.</p>
+          <div class="btn-row">
+            ${done ? '<span class="drill-done">Done today ✓</span><button class="btn" type="button" data-act="challenge">Open it</button>' : '<button class="btn btn-primary" type="button" data-act="challenge">Start today’s challenge</button>'}
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function startChallenge() {
+    const g = genre();
+    const c = todaysChallenge(g);
+    let d = state.docs.find((x) => x.challenge && x.challenge.key === c.key && x.genre === g.id);
+    if (!d) {
+      const outline = c.fw.structure === false
+        ? c.fw.beats.map((b) => `> ${b.name}: ${b.hint}`).join('\n') + '\n\n'
+        : c.fw.beats.map((b) => `## ${b.name}\n> ${b.hint}\n\n`).join('');
+      d = newDoc(g.id, {
+        title: `Challenge: ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`,
+        framework: c.fw.id,
+        text: `> Today’s challenge: ${c.prompt}\n> Write at least ${c.words} words using the ${c.fw.name} framework.\n\n${outline}`,
+        challenge: { key: c.key, words: c.words },
+      });
+      persist(true);
+    }
+    openDoc(d.id);
+    closeDrawers();
+    const ta = $('editor');
+    const firstHint = ta.value.search(/\n> (?!Today|Write at least)[^\n]*\n/);
+    const pos = firstHint >= 0 ? ta.value.indexOf('\n', firstHint + 1) + 1 : ta.value.length;
+    ta.focus();
+    ta.setSelectionRange(pos, pos);
+  }
+
+  function checkChallenge(d, words) {
+    if (!d.challenge) return;
+    const id = d.challenge.key + ':' + d.genre;
+    if (prefs.challenges[id] || words < d.challenge.words) return;
+    prefs.challenges[id] = true;
+    savePrefs();
+    toast(`Challenge complete: ${words} words. Come back tomorrow for a new one.`);
+    if (prefs.leftTab === 'ideas') renderIdeas();
+  }
+
+  /* ---------- version history ---------- */
+
+  const VERSION_GAP = 10 * 60 * 1000;
+  const MAX_VERSIONS = 30;
+
+  function pushVersion(d, label) {
+    d.versions = d.versions || [];
+    const last = d.versions[d.versions.length - 1];
+    if (last && last.text === d.text) return false;
+    const ctx = T.parse(d.text, { framework: d.framework, genre: d.genre });
+    ctx.frameworkDef = genreById(d.genre).frameworks.find((f) => f.id === d.framework) || null;
+    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx).score;
+    d.versions.push({ at: Date.now(), text: d.text, words: ctx.wordCount, score, label: label || '' });
+    if (d.versions.length > MAX_VERSIONS) d.versions.splice(0, d.versions.length - MAX_VERSIONS);
+    persist();
+    return true;
+  }
+
+  function autoVersion(d, score, words) {
+    if (words < 20) return;
+    const vs = d.versions || [];
+    const last = vs[vs.length - 1];
+    if (!last) {
+      d.versions = [{ at: Date.now(), text: d.text, words, score, label: 'First saved' }];
+      persist();
+    } else if (Date.now() - last.at > VERSION_GAP && last.text !== d.text) {
+      pushVersion(d, 'Auto-saved');
+    }
+  }
+
+  function renderHistory(d) {
+    const vs = (d.versions || []).slice().reverse();
+    const points = (d.versions || []).map((v) => v.score).filter((x) => x != null).concat(state.score != null ? [state.score] : []);
+    let spark = '';
+    if (points.length >= 2) {
+      const W = 260;
+      const H = 48;
+      const x = (i) => (i / (points.length - 1)) * (W - 8) + 4;
+      const y = (v) => H - 4 - (v / 100) * (H - 8);
+      const pts = points.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const lastI = points.length - 1;
+      spark = `<svg class="score-spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Score across versions, from ${points[0]} to ${points[lastI]}">
+        <line class="grid" x1="0" x2="${W}" y1="${y(50)}" y2="${y(50)}"></line>
+        <polyline points="${pts}"></polyline>
+        ${points.map((v, i) => `<circle class="${i === lastI ? 'end' : 'pt'}" cx="${x(i)}" cy="${y(v)}" r="${i === lastI ? 4.5 : 2.5}"></circle><rect class="bar-hit" x="${x(i) - 8}" y="0" width="16" height="${H}" data-tip="${i === lastI ? 'Now' : 'Version ' + (i + 1)}: score ${v}"></rect>`).join('')}
+      </svg>
+      <p class="small muted">Score ${points[0]} → <b>${points[lastI]}</b> across ${points.length - 1} saved ${points.length - 1 === 1 ? 'version' : 'versions'}.</p>`;
+    }
+    return `<section class="section">
+        <p class="eyebrow">History of this draft</p>
+        ${spark}
+        <div class="btn-row"><button class="btn" type="button" data-act="save-version">Save a version now</button></div>
+        ${vs.length ? `<ul class="version-list">${vs.map((v) => {
+          const i = d.versions.indexOf(v);
+          return `<li class="version">
+            <span class="version-meta"><b>${esc(new Date(v.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</b>
+            <span>${v.words} words${v.score != null ? ` · score ${v.score}` : ''}${v.label ? ` · ${esc(v.label)}` : ''}</span></span>
+            <span class="btn-row"><button class="btn btn-small" type="button" data-compare="${i}">Compare</button><button class="btn btn-small" type="button" data-restore="${i}">Restore</button></span>
+          </li>`;
+        }).join('')}</ul>` : '<p class="small muted">Versions are saved automatically every 10 minutes while you write. Save one yourself before a big rewrite.</p>'}
+      </section>`;
+  }
+
+  function compareVersion(i) {
+    const d = doc();
+    const v = d.versions[i];
+    const r = WP.diff(v.text, d.text, esc);
+    openModal(`Changes since ${new Date(v.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`, `
+      <p class="small muted"><ins>${r.added} words added</ins> · <del>${r.removed} removed</del> · score ${v.score != null ? v.score : '–'} → ${state.score != null ? state.score : '–'}</p>
+      <pre class="diff">${r.html || '<span class="muted">No changes.</span>'}</pre>`);
+  }
+
+  function restoreVersion(i) {
+    const d = doc();
+    const v = d.versions[i];
+    pushVersion(d, 'Before restoring');
+    const ta = $('editor');
+    ta.focus();
+    ta.setSelectionRange(0, ta.value.length);
+    editor.insert(v.text);
+    ta.setSelectionRange(0, 0);
+    analyze();
+    renderDrafts();
+    toast('Version restored. Your previous text was saved in History, and Ctrl+Z (⌘Z) undoes this.');
+  }
+
+  /* ---------- modal + tour ---------- */
+
+  function openModal(title, html) {
+    $('modalTitle').textContent = title;
+    $('modalBody').innerHTML = html;
+    $('modal').hidden = false;
+    $('modalClose').focus();
+  }
+
+  function closeModal() {
+    $('modal').hidden = true;
+  }
+
+  const TOUR = [
+    { title: 'Welcome to your writing playground', body: 'A place to practice writing with guidance. Pick a kind of writing, use a proven structure, and get feedback as you type. This tour takes 30 seconds.' },
+    { target: '#genreTabs', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
+    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule.' },
+    { target: '#sheet', title: '3. Write, and watch the highlights', body: 'Green means you’re following a rule, amber means take a look, red means it breaks a rule. Click a highlight to see why and fix it in one click. Listen reads your draft aloud.' },
+    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach (inside Claude) reviews your draft like an editor. Learn explains the basics.' },
+    { title: 'Start small', body: 'The best first step is a five-minute win. Try one drill, or take today’s challenge.', final: true },
+  ];
+  let tourStep = -1;
+
+  function startTour() {
+    tourStep = 0;
+    renderTour();
+  }
+
+  function endTour() {
+    tourStep = -1;
+    document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
+    $('tour').hidden = true;
+    prefs.toured = true;
+    savePrefs();
+  }
+
+  function renderTour() {
+    document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
+    const step = TOUR[tourStep];
+    if (!step) return endTour();
+    const narrow = window.matchMedia('(max-width: 960px)').matches;
+    if (step.side && !narrow) {
+      if (step.side === 'left') prefs.showLeft = true;
+      else prefs.showRight = true;
+      prefs.focus = false;
+      applyLayout();
+    }
+    const target = step.target && document.querySelector(step.target);
+    if (target && target.offsetParent !== null && !(narrow && step.side)) target.classList.add('tour-target');
+    $('tour').innerHTML = `
+      <p class="eyebrow">${tourStep + 1} of ${TOUR.length}</p>
+      <h3>${esc(step.title)}</h3>
+      <p>${esc(step.body)}</p>
+      <div class="btn-row">
+        ${step.final
+          ? '<button class="btn btn-primary" type="button" data-tour="drill">Try a drill</button><button class="btn" type="button" data-tour="challenge">Today’s challenge</button><button class="btn btn-quiet" type="button" data-tour="end">Just write</button>'
+          : `${tourStep > 0 ? '<button class="btn btn-quiet" type="button" data-tour="back">Back</button>' : '<button class="btn btn-quiet" type="button" data-tour="end">Skip</button>'}<button class="btn btn-primary" type="button" data-tour="next">${tourStep === 0 ? 'Show me' : 'Next'}</button>`}
+      </div>`;
+    $('tour').hidden = false;
+    $('tour').querySelector('.btn-primary').focus();
+  }
+
+  /* ---------- ask the coach ---------- */
+
+  function askCoachAbout(m) {
+    const text = $('editor').value.slice(m.start, m.end).replace(/\s+/g, ' ').trim().slice(0, 300);
+    const q = `In my draft, the "${m.checkTitle}" rule flags this: "${text}". The checker says: ${m.note} Explain in simple words why this is a problem in my ${genre().name.toLowerCase()} piece, and show me two better ways to write it.`;
+    hideFixCard();
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left');
+      $('layout').classList.add('show-right');
+    } else {
+      prefs.showRight = true;
+      prefs.focus = false;
+    }
+    setTab('right', 'coach');
+    applyLayout();
+    WP.coach.askAbout(q);
   }
 
   /* ---------- Practice pane ---------- */
@@ -659,6 +895,7 @@
         <ul class="draft-list">${items}</ul>
         <p class="small muted">Drafts are saved in this browser only. Copy or download anything you want to keep elsewhere.</p>
       </section>
+      ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
         <div class="btn-row">
@@ -916,6 +1153,7 @@
       <section class="section">
         <p class="eyebrow">${esc(g.name)} basics</p>
         <p class="lead">${esc(gd.intro)}</p>
+        <div class="btn-row"><button class="btn" type="button" data-act="tour">Take the tour of this page</button></div>
       </section>
       <section class="section">
         <p class="eyebrow">Core principles</p>
@@ -1051,7 +1289,9 @@
     const ta = $('editor');
     const pos = ta.selectionStart;
     if (ta.selectionEnd !== pos) return hideFixCard();
-    const m = editor.marksAt(pos).filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
+    const here = editor.marksAt(pos).filter((x) => x.level !== 'info' || x.fixes);
+    const m = here.filter((x) => x.fixes && x.fixes.length).sort((a, b) => levelRank(b.level) - levelRank(a.level))[0]
+      || here.filter((x) => x.level !== 'good').sort((a, b) => levelRank(b.level) - levelRank(a.level))[0];
     if (!m) return hideFixCard();
     state.fixMark = m;
     const card = $('fixCard');
@@ -1059,7 +1299,8 @@
       <p class="tip-title"><span class="swatch swatch-${m.level}"></span>${esc(m.checkTitle)}</p>
       <p>${esc(m.note)}</p>
       <div class="btn-row">
-        ${m.fixes.map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        ${(m.fixes || []).map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
+        ${WP.coach.isReady() ? '<button class="btn" type="button" data-card-coach>Ask the coach</button>' : ''}
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
@@ -1261,12 +1502,67 @@
       const b = e.target.closest('button');
       if (!b) return;
       if (b.hasAttribute('data-card-close')) return hideFixCard();
+      if (b.hasAttribute('data-card-coach') && state.fixMark) return askCoachAbout(state.fixMark);
       if (b.dataset.cardFix && state.fixMark) applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
     });
     document.addEventListener('mousedown', (e) => {
       if (!e.target.closest('#fixCard') && e.target.id !== 'editor') hideFixCard();
     });
     $('desk').addEventListener('scroll', placeFixCard, { passive: true });
+
+    $('modalClose').addEventListener('click', closeModal);
+    $('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') closeModal();
+    });
+    $('tour').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tour]');
+      if (!b) return;
+      const a = b.dataset.tour;
+      if (a === 'next') {
+        tourStep++;
+        renderTour();
+      } else if (a === 'back') {
+        tourStep--;
+        renderTour();
+      } else if (a === 'end') endTour();
+      else if (a === 'drill') {
+        endTour();
+        const first = drillsFor(genre())[0];
+        if (window.matchMedia('(max-width: 960px)').matches) $('layout').classList.add('show-left');
+        setTab('left', 'practice');
+        applyLayout();
+        if (first) startDrill(first.id);
+      } else if (a === 'challenge') {
+        endTour();
+        startChallenge();
+      }
+    });
+    $('pane-learn').addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="tour"]')) {
+        closeDrawers();
+        startTour();
+      }
+    });
+    const chartTip = (pane) => {
+      pane.addEventListener('mousemove', (e) => {
+        const hit = e.target.closest && e.target.closest('.bar-hit');
+        const tip = $('tooltip');
+        if (!hit) {
+          if (tip.dataset.src === 'chart') tip.hidden = true;
+          return;
+        }
+        tip.textContent = hit.dataset.tip;
+        tip.dataset.src = 'chart';
+        tip.hidden = false;
+        const r = hit.getBoundingClientRect();
+        tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 12, Math.max(12, r.left + r.width / 2 - tip.offsetWidth / 2)) + 'px';
+        tip.style.top = Math.max(12, r.top - tip.offsetHeight - 8) + 'px';
+      });
+      pane.addEventListener('mouseleave', () => {
+        if ($('tooltip').dataset.src === 'chart') $('tooltip').hidden = true;
+      });
+    };
+    chartTip($('pane-drafts'));
 
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');
@@ -1333,7 +1629,8 @@
       } else if (act === 'use-nudge') {
         insertNote(state.nudge);
         toast('Question added as a note. Answer it on the next line.');
-      } else if (act === 'sprint') return startSprint(Number(b.dataset.min));
+      } else if (act === 'challenge') return startChallenge();
+      else if (act === 'sprint') return startSprint(Number(b.dataset.min));
       else if (act === 'stop-sprint') return stopSprint(false);
       renderIdeas();
     });
@@ -1370,6 +1667,12 @@
         $('docTitle').focus();
       } else if (t.dataset.act === 'copy') copyText();
       else if (t.dataset.act === 'download') downloadText(t.dataset.ext || 'txt');
+      else if (t.dataset.act === 'save-version') {
+        if (pushVersion(doc(), 'Saved by you')) toast('Version saved.');
+        else toast('This version is already saved. Keep writing and save again.');
+        renderDrafts();
+      } else if (t.dataset.compare) compareVersion(Number(t.dataset.compare));
+      else if (t.dataset.restore) restoreVersion(Number(t.dataset.restore));
     });
 
     $('pane-checks').addEventListener('click', (e) => {
@@ -1449,6 +1752,10 @@
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');
+      } else if (e.key === 'Escape' && !$('modal').hidden) {
+        closeModal();
+      } else if (e.key === 'Escape' && tourStep >= 0) {
+        endTour();
       } else if (e.key === 'Escape' && state.fixMark) {
         hideFixCard();
       } else if (e.key === 'Escape' && state.spotlight) {
@@ -1480,6 +1787,7 @@
     openDoc(first.id);
     applyLayout();
     persist(true);
+    if (!prefs.toured) setTimeout(startTour, 500);
   }
 
   boot();

@@ -97,6 +97,16 @@
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <div class="fix-card" id="fixCard" role="dialog" aria-label="Suggested fix" hidden></div>
+  <div class="tour" id="tour" role="dialog" aria-label="Welcome tour" hidden></div>
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h2 id="modalTitle"></h2>
+        <button class="btn btn-quiet" id="modalClose" type="button">Close</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
 <!--APP-END-->
@@ -104,12 +114,15 @@
 <script src="js/core/text.js"></script>
 <script src="js/core/lexicon.js"></script>
 <script src="js/core/checks.js"></script>
+<script src="js/core/diff.js"></script>
 <script src="js/genres/comedy.js"></script>
 <script src="js/genres/video.js"></script>
 <script src="js/genres/story.js"></script>
 <script src="js/genres/essay.js"></script>
 <script src="js/genres/poetry.js"></script>
 <script src="js/genres/copy.js"></script>
+<script src="js/genres/speech.js"></script>
+<script src="js/genres/screenplay.js"></script>
 <script src="js/genres/drills.js"></script>
 <script src="js/ui/editor.js"></script>
 <script src="js/ui/coach.js"></script>
