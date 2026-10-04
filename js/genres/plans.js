@@ -25,6 +25,13 @@
       { id: 'stakes', q: 'What happens if they fail?', hint: 'The cost makes the reader care.', ph: 'She loses the last link to her mother' },
       { id: 'change', q: 'How do they change?', hint: 'Who are they by the end?', ph: 'She leaves the village and opens her own shop' },
     ],
+    novel: [
+      { id: 'character', q: 'Your hero', hint: 'Name, age, and the flaw that will cause trouble.', ph: 'Mira, 26, sorts mail and never leaves her town' },
+      { id: 'want', q: 'What do they want?', hint: 'The goal that drives the whole book.', ph: 'To find out what really happened to her mother' },
+      { id: 'opposition', q: 'Who or what opposes them?', hint: 'A person with their own reasons is stronger than bad luck.', ph: 'The town council, who covered it up' },
+      { id: 'stakes', q: 'What happens if they fail?', hint: 'Make it personal.', ph: 'She loses the truth and the only family she has left' },
+      { id: 'ending', q: 'Where does it end?', hint: 'The last image. Planning the ending first makes the middle easier.', ph: 'Mira leaves Marsh End on the bus that never comes back' },
+    ],
     essay: [
       { id: 'thesis', q: 'Your main point in one sentence', hint: 'A sentence someone could disagree with.', ph: 'Everyone should learn to cook five basic meals' },
       { id: 'reader', q: 'Who is the reader?', hint: 'What do they already believe?', ph: 'Busy people who think cooking takes too long' },

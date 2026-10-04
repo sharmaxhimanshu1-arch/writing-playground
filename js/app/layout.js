@@ -176,7 +176,7 @@
 
   const TOUR = [
     { title: 'Welcome to your writing playground', body: 'A place to practice writing with guidance. Pick a kind of writing, use a proven structure, and get feedback as you type. This tour takes 30 seconds.' },
-    { target: '.genre-pick', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
+    { target: '.genre-pick', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, novels, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
     { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule. Open them any time from the icons on the left edge.' },
     { target: '#sheet', title: '3. Write, and watch the highlights', body: 'Green means you’re following a rule, amber means take a look, red means it breaks a rule. Click a highlight to see why and fix it in one click. Listen reads your draft aloud.' },
     { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach reviews your draft. Learn explains the basics. They live behind the icons on the right edge; the number on Checks is your live score.' },
