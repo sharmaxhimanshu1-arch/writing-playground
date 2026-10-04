@@ -2,7 +2,7 @@
   'use strict';
   const T = WP.text;
   const lex = WP.lex;
-  const { C, mark, plural, quote, band, DELETE } = WP.checks;
+  const { C, mark, plural, quote, DELETE } = WP.checks;
 
   const CLAIM = ['should', 'must', 'need to', 'the key', 'the truth is', "here's why", 'here is why', 'this is why',
     'in this post', 'in this article', 'in this essay', "i'll show", 'i will show', "you'll learn", 'you will learn',
