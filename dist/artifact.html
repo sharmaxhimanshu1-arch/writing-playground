@@ -428,7 +428,8 @@ code, kbd {
 .score-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--text-xs); color: var(--muted); margin-top: 6px; }
 .score-legend b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
-.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.filters-label { font-size: var(--text-xs); color: var(--faint); font-weight: 700; margin-right: 2px; }
 .filter {
   display: inline-flex;
   align-items: center;
@@ -1256,6 +1257,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   background-repeat: no-repeat;
   cursor: pointer;
   max-width: 100%;
+  field-sizing: content;
 }
 .tool-pill {
   border: 1px solid var(--line);
@@ -1271,6 +1273,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   white-space: nowrap;
 }
 .tool-select:hover, .tool-pill:hover { border-color: var(--accent); color: var(--accent); }
+.tool-pill-icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; flex: none; margin-right: 6px; color: var(--faint); vertical-align: -3px; }
 .tool-pill-label { color: var(--faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.625rem; margin-right: 2px; }
 .tool-icons { gap: 2px; }
 .tool-btn {
@@ -1288,6 +1291,10 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .tool-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .tool-btn:hover { color: var(--ink); background: var(--panel); }
 .tool-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+@container (max-width: 760px) {
+  .tool-pill-label { display: none; }
+  .tool-pill { max-width: 210px; }
+}
 @container (max-width: 540px) {
   .tool-label, .tool-pill-label { display: none; }
   .tool-pill { max-width: 170px; }
@@ -1357,6 +1364,41 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 
 .sheet-foot { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 
+/* Ideas: one idea card with a prompt / build switch */
+.eyebrow-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.eyebrow-row .eyebrow { margin: 0; }
+.mode-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--raised); }
+.mode-switch button { border: 0; background: none; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: var(--text-xs); font-weight: 700; color: var(--muted); cursor: pointer; }
+.mode-switch button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.mode-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sprint-row { flex-wrap: nowrap; }
+.sprint-row .btn { flex: 1; padding-left: 0; padding-right: 0; }
+
+/* Practice: warm-ups as a compact grid */
+.game-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.game-tile {
+  width: 100%; height: 100%; text-align: left; display: flex; flex-direction: column; gap: 3px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised);
+  padding: 9px 10px; font: inherit; color: var(--ink); cursor: pointer;
+}
+.game-tile:hover { border-color: var(--accent); }
+.game-tile.done { background: var(--panel); }
+.game-title { font-weight: 700; font-size: var(--text-sm); }
+.game-task { font-size: var(--text-xs); color: var(--muted); }
+.game-min { font-size: var(--text-xs); color: var(--faint); margin-top: auto; }
+
+.link-btn { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn:hover { color: var(--ink); }
+.section.flash { animation: section-flash 1.2s ease-out; }
+@keyframes section-flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .section.flash { animation: none; } }
+
+/* Coach fallback: self-edit checklist */
+.self-edit { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.self-edit label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); cursor: pointer; font-size: var(--text-sm); }
+.self-edit input { margin-top: 3px; accent-color: var(--accent); flex: none; }
+.self-edit input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+
 </style>
 <div class="app" id="app">
   <header class="topbar">
@@ -1416,13 +1458,9 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 <span class="tool-label">Preview</span>
               </button>
-              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing and font">
+              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing, font and page width">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 8 6l5 12M4.8 14h6.4"/><path d="M15 18v-5.5a2.5 2.5 0 0 1 5 0V18M15 15h5"/></svg>
                 <span class="tool-label">Display</span>
-              </button>
-              <button class="tool-btn" id="widthBtn" type="button" aria-pressed="false" title="Wider page">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
-                <span class="tool-label">Wide</span>
               </button>
             </div>
           </div>
@@ -1432,7 +1470,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
           <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start writing here…"></textarea>
         </div>
-        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <span><code>## Heading</code> section</span> <span><code>&gt; note</code> private note</span> <span><code>[CUE]</code> stage direction</span> <span>blank line = new bit or stanza</span></p>
+        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <button class="link-btn" id="syntaxHelp" type="button">Formatting tips</button></p>
       </div>
     </main>
 
@@ -5870,6 +5908,7 @@ You told me to.`,
   const GAMES = [
     {
       id: 'six-word',
+      short: 'A whole story in six words.',
       title: 'Six-word story',
       minutes: 3,
       rules: 'Tell a complete story in exactly six words. The legend: “For sale: baby shoes, never worn.”',
@@ -5878,6 +5917,7 @@ You told me to.`,
     },
     {
       id: 'fifty',
+      short: 'A whole story in exactly 50 words.',
       title: 'Fifty-word story',
       minutes: 5,
       rules: 'Write a complete story with a beginning, middle and end in exactly fifty words.',
@@ -5886,6 +5926,7 @@ You told me to.`,
     },
     {
       id: 'lipogram',
+      short: '40 words, no letter E.',
       title: 'No letter E',
       minutes: 5,
       rules: 'Write at least 40 words without using the letter “e” once. It is the most common letter in English.',
@@ -5911,6 +5952,7 @@ You told me to.`,
     },
     {
       id: 'three-words',
+      short: 'One scene, three random words.',
       title: 'Three random words',
       minutes: 5,
       rules: 'Write a short scene (at least 60 words) that uses all three of these words: {words}.',
@@ -5943,6 +5985,7 @@ You told me to.`,
     },
     {
       id: 'abc',
+      short: 'Five sentences, A to E.',
       title: 'ABC sentences',
       minutes: 5,
       rules: 'Write five sentences. The first starts with A, the second with B, then C, D and E.',
@@ -5976,6 +6019,7 @@ You told me to.`,
     },
     {
       id: 'no-crutches',
+      short: '80 words, no crutch words.',
       title: 'No crutch words',
       minutes: 5,
       rules: 'Write at least 80 words without: very, really, just, thing, stuff, nice, good, bad, a lot.',
@@ -6001,6 +6045,7 @@ You told me to.`,
     },
     {
       id: 'five-senses',
+      short: 'One place, all five senses.',
       title: 'Five senses',
       minutes: 5,
       rules: 'Describe one place in five sentences, using all five senses: sight, sound, smell, taste and touch.',
@@ -6034,6 +6079,7 @@ You told me to.`,
     },
     {
       id: 'dialogue-only',
+      short: 'A scene told only in dialogue.',
       title: 'Dialogue only',
       minutes: 5,
       rules: 'Write a scene of at least eight lines told only through dialogue. Every line is something a character says, in quotation marks.',
@@ -6407,7 +6453,93 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
     essay: ['Make it clearer', 'Add an example', 'Stronger opening', 'Shorter'],
     poetry: ['More concrete images', 'Fit the form', 'Fresher comparison', 'Stronger last line'],
     copy: ['Focus on benefits', 'Punchier', 'Talk to “you”', 'Stronger call to action'],
+    speech: ['Easier to say aloud', 'Stronger opening', 'Add a story', 'Memorable ending'],
+    screenplay: ['Leaner action lines', 'More subtext', 'Sharper dialogue', 'Raise the conflict'],
   };
+
+  // Questions for a self-edit when the AI coach isn't available. One read-through per question.
+  const SELF_EDIT = {
+    comedy: [
+      'Does every joke end on its funniest word?',
+      'Could any setup lose half its words and still work?',
+      'Is there a real attitude (weird, scary, hard, stupid) behind each bit?',
+      'Did you replace every vague word with a name, brand or number?',
+      'Read it aloud: where would you pause for the laugh?',
+    ],
+    video: [
+      'Would the first five seconds stop a stranger from scrolling?',
+      'Does each section give the viewer a reason to keep watching?',
+      'Is every sentence easy to say in one breath?',
+      'Do you talk to “you” more than about yourself?',
+      'Is there one clear thing to do at the end?',
+    ],
+    story: [
+      'Does the first line raise a question?',
+      'What does your main character want, and what stops them?',
+      'Where did you tell a feeling you could show instead?',
+      'Is there at least one detail for a sense other than sight?',
+      'Is the character different at the end from the start?',
+    ],
+    essay: [
+      'Can you say your main point in one sentence, and is it near the top?',
+      'Does every paragraph support that point?',
+      'Is each claim backed by an example, number or source?',
+      'Does each paragraph lead into the next?',
+      'Does the ending leave the reader with something to do or think?',
+    ],
+    poetry: [
+      'Which line could you cut without losing anything?',
+      'Are your images things a reader can see, hear or touch?',
+      'Does each line end on a strong word?',
+      'Is there a comparison nobody has used before?',
+      'Read it aloud: does the sound match the feeling?',
+    ],
+    copy: [
+      'Does the headline promise a clear benefit?',
+      'Do you say “you” more than “we”?',
+      'Is every feature turned into what it does for the reader?',
+      'Is there proof: a number, a name, a result?',
+      'Is the call to action one clear step?',
+    ],
+    speech: [
+      'Does the first line grab the room without “Hi, my name is”?',
+      'Can the audience tell where they are in the talk?',
+      'Is there one story that makes the message stick?',
+      'Is every sentence easy to say out loud?',
+      'Do you end on your message rather than “thank you”?',
+    ],
+    screenplay: [
+      'What does each character want in this scene?',
+      'Could a camera film every action line?',
+      'Does anyone say exactly what they feel? Could they hint instead?',
+      'Does the scene end in a different place from where it started?',
+      'Could any speech be cut in half?',
+    ],
+  };
+
+  function renderSelfEdit(note) {
+    const g = app.genre();
+    const d = app.doc();
+    const qs = SELF_EDIT[g.id] || SELF_EDIT.essay;
+    const done = d.selfEdit || {};
+    const n = qs.filter((_, i) => done[i]).length;
+    const rank = { fail: 0, warn: 1 };
+    const needs = app.results().filter((r) => r.status in rank).sort((a, b) => rank[a.status] - rank[b.status]).slice(0, 3);
+    return `
+      <section class="section">
+        <p class="eyebrow">Be your own editor</p>
+        <p class="small muted">Read your draft once for each question below. One question per read-through works better than looking for everything at once.</p>
+        <ul class="self-edit">${qs.map((q, i) => `<li><label><input type="checkbox" data-self-edit="${i}" ${done[i] ? 'checked' : ''}><span>${esc(q)}</span></label></li>`).join('')}</ul>
+        <p class="small muted">${n === qs.length ? 'All done. Save a version in Drafts so you can see what changed.' : `${n} of ${qs.length} done for this draft.`}</p>
+      </section>
+      ${needs.length ? `<section class="section">
+        <p class="eyebrow">The checks say: fix these first</p>
+        <ol class="plain-list">${needs.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ol>
+      </section>` : ''}
+      <section class="section">
+        <p class="small muted">${esc(note)}</p>
+      </section>`;
+  }
 
   const ERRORS = {
     rate_limited: 'Too many requests right now. Wait a minute, then try again.',
@@ -6607,14 +6739,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function render() {
     const pane = $('pane-coach');
-    if (!pane || !app) return;
+    if (!pane || !app || !app.doc()) return;
     if (C.status !== 'ready') {
       const msg = {
         loading: 'Connecting to Claude…',
-        absent: 'The coach uses Claude to read your draft the way an editor would: what works, what to fix, and rewrites you can drop in. It runs when you open Writing Playground as a Claude artifact. Everything else on this page works without it.',
-        off: 'The coach is turned off for this page. You can allow it from the page’s Permissions menu, then reload.',
+        absent: 'Open Writing Playground as a Claude artifact to get an AI coach here: a full review of your draft, rewrites of any passage, brainstorming and answers to your questions.',
+        off: 'The AI coach is turned off for this page. Allow it from the page’s Permissions menu, then reload, to get reviews and rewrites here.',
       }[C.status];
-      pane.innerHTML = `<section class="section"><p class="eyebrow">Writing coach</p><p class="lead">${esc(msg)}</p></section>`;
+      pane.innerHTML = C.status === 'loading'
+        ? `<section class="section"><p class="eyebrow">Writing coach</p><p class="lead">${esc(msg)}</p></section>`
+        : renderSelfEdit(msg);
       return;
     }
     const g = app.genre();
@@ -6710,6 +6844,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function bind() {
     const pane = $('pane-coach');
+    pane.addEventListener('change', (e) => {
+      const i = e.target.dataset && e.target.dataset.selfEdit;
+      if (i == null) return;
+      const d = app.doc();
+      d.selfEdit = Object.assign({}, d.selfEdit, { [i]: e.target.checked });
+      app.persist();
+      render();
+      const box = pane.querySelector(`[data-self-edit="${i}"]`);
+      if (box) box.focus();
+    });
     pane.addEventListener('click', (e) => {
       const t = e.target.closest('button');
       if (!t) return;
@@ -6793,9 +6937,9 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   const STORE_PREFS = 'wp.prefs.v1';
   const LEVELS = [
     { id: 'good', label: 'Following' },
-    { id: 'warn', label: 'Consider' },
+    { id: 'warn', label: 'Improve' },
     { id: 'bad', label: 'Breaking' },
-    { id: 'info', label: 'Info' },
+    { id: 'info', label: 'Tip' },
   ];
   const STATUS_LABEL = { pass: 'Following', warn: 'Improve', fail: 'Breaking', info: 'Tip', na: 'Waiting' };
   const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, info: 3, na: 4 };
@@ -7118,7 +7262,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const st = streak();
     const total = days.reduce((a, x) => a + x.words, 0);
     if (!total) {
-      el.innerHTML = `<p class="small muted">Nothing written yet in the last 14 days. Your daily words and streak will show up here.</p>`;
+      el.innerHTML = `<p class="small muted">Your daily word count and streak show up here once you start writing.</p>`;
       return;
     }
     el.innerHTML = `
@@ -7209,7 +7353,6 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       $('toggleRight').setAttribute('aria-expanded', String(prefs.showRight && !prefs.focus));
     }
     $('sheet').classList.toggle('wide', prefs.wide);
-    $('widthBtn').setAttribute('aria-pressed', String(prefs.wide));
   }
 
   function togglePanel(side) {
@@ -7419,6 +7562,11 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         ${group('size', 'Text size')}
         ${group('spacing', 'Line spacing')}
         ${group('font', 'Font')}
+        <fieldset class="seg">
+          <legend>Page width</legend>
+          <label><input type="radio" name="disp-width" value="normal" ${prefs.wide ? '' : 'checked'}><span>Normal</span></label>
+          <label><input type="radio" name="disp-width" value="wide" ${prefs.wide ? 'checked' : ''}><span>Wide</span></label>
+        </fieldset>
         <p class="small muted">Easy-read uses Atkinson Hyperlegible, a typeface designed for readers with low vision. These settings only change how the page looks to you.</p>
       </form>`);
   }
@@ -7595,36 +7743,32 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     if (!state.prompt) state.prompt = pick(g.prompts);
     if (!state.idea) state.idea = buildIdea(g);
     const sprint = state.sprint;
+    const build = prefs.ideaMode === 'build';
     $('pane-ideas').innerHTML = `
-      <section class="section">
-        <p class="eyebrow">Your writing</p>
-        <div id="progressBox"></div>
-        <div class="btn-row"><button class="btn" type="button" data-act="habits">See my writing habits</button></div>
-      </section>
-
       ${renderChallengeCard(g)}
 
       <section class="section">
-        <p class="eyebrow">Prompt · ${esc(g.name)}</p>
-        <div class="idea-card">
-          <p class="idea-text">${esc(state.prompt)}</p>
-          <div class="btn-row">
-            <button class="btn" type="button" data-act="next-prompt">Another prompt</button>
-            <button class="btn btn-primary" type="button" data-act="use-prompt">Use this</button>
+        <div class="eyebrow-row">
+          <p class="eyebrow">Get an idea</p>
+          <div class="mode-switch" role="group" aria-label="Kind of idea">
+            <button type="button" data-act="idea-mode" data-mode="prompt" aria-pressed="${!build}">Prompt</button>
+            <button type="button" data-act="idea-mode" data-mode="build" aria-pressed="${build}">Build one</button>
           </div>
         </div>
-      </section>
-
-      <section class="section">
-        <p class="eyebrow">Idea builder</p>
-        <div class="idea-card">
+        ${build ? `<div class="idea-card">
           <p class="idea-text">${ideaText(g, state.idea, true)}</p>
           <p class="small muted">Tap any highlighted part to swap just that piece.</p>
           <div class="btn-row">
             <button class="btn" type="button" data-act="shuffle-idea">Shuffle all</button>
             <button class="btn btn-primary" type="button" data-act="use-idea">Use this</button>
           </div>
-        </div>
+        </div>` : `<div class="idea-card">
+          <p class="idea-text">${esc(state.prompt)}</p>
+          <div class="btn-row">
+            <button class="btn" type="button" data-act="next-prompt">Another prompt</button>
+            <button class="btn btn-primary" type="button" data-act="use-prompt">Use this</button>
+          </div>
+        </div>`}
       </section>
 
       <section class="section">
@@ -7637,19 +7781,25 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       </section>
 
       <section class="section">
-        <p class="eyebrow">Writing sprint</p>
+        <p class="eyebrow">Sprint &amp; goal</p>
         ${sprint ? `<div class="idea-card">
             <span class="sprint-clock" id="sprintClock">${fmtClock(sprint.end - Date.now())}</span>
             <p class="small muted" id="sprintWords">${Math.max(0, wordCount() - sprint.startWords)} words so far. Don’t stop, don’t edit.</p>
             <div class="btn-row"><button class="btn btn-danger" type="button" data-act="stop-sprint">Stop sprint</button></div>
           </div>`
-          : `<p class="small muted">The fastest cure for a blank page: set a timer and write without stopping or deleting. Quality comes later, in the edit.</p>
-          <div class="btn-row">
+          : `<p class="small muted">Set a timer and write without stopping or deleting. Quality comes later, in the edit.</p>
+          <div class="btn-row sprint-row">
             ${[5, 10, 15, 25].map((m) => `<button class="btn" type="button" data-act="sprint" data-min="${m}">${m} min</button>`).join('')}
           </div>`}
         <label class="field" for="goalInput">Word goal
           <input id="goalInput" type="number" min="0" step="50" inputmode="numeric" value="${prefs.goal || ''}" placeholder="e.g. 300">
         </label>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">Your writing</p>
+        <div id="progressBox"></div>
+        <div class="btn-row"><button class="btn" type="button" data-act="habits">See my writing habits</button></div>
       </section>`;
     renderProgress();
   }
@@ -7752,7 +7902,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const vs = (d.versions || []).slice().reverse();
     const points = (d.versions || []).map((v) => v.score).filter((x) => x != null).concat(state.score != null ? [state.score] : []);
     let spark = '';
-    if (points.length >= 2) {
+    // A flat line between two equal scores says nothing, so wait for a change.
+    if (points.length >= 3 || (points.length === 2 && points[0] !== points[1])) {
       const W = 260;
       const H = 48;
       const x = (i) => (i / (points.length - 1)) * (W - 8) + 4;
@@ -7963,11 +8114,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   function renderWarmups() {
     return `<section class="section">
         <p class="eyebrow">Warm-ups · 3 to 5 minutes</p>
-        <p class="small muted">Quick writing games with one hard rule, checked as you type. A timer starts with each one. Great for getting going before real work.</p>
-        <ul class="drill-list">${WP.warmups.list.map((x) => `<li class="drill">
-          <button type="button" class="drill-open" data-game="${x.id}">
-            <span class="drill-title">${prefs.warmups[x.id] ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)} <span class="small muted">· ${x.minutes} min</span></span>
-            <span class="drill-task">${esc(WP.warmups.rulesText(x, { words: ['three', 'random', 'words'] }))}</span>
+        <p class="small muted">Quick games with one hard rule, checked as you type. Good for getting going before real work.</p>
+        <ul class="game-grid">${WP.warmups.list.map((x) => `<li>
+          <button type="button" class="game-tile ${prefs.warmups[x.id] ? 'done' : ''}" data-game="${x.id}" title="${esc(WP.warmups.rulesText(x, { words: ['three', 'random', 'words'] }))}">
+            <span class="game-title">${prefs.warmups[x.id] ? '<span class="tick" aria-label="Done">✓</span>' : ''}${esc(x.title)}</span>
+            <span class="game-task">${esc(x.short || x.title)}</span>
+            <span class="game-min">${x.minutes} min</span>
           </button>
         </li>`).join('')}</ul>
       </section>`;
@@ -8247,7 +8399,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     return `<section class="section">
         <p class="eyebrow">Keep your work safe</p>
         <p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>
-        ${used == null ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
+        ${used == null || pct < 25 ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
         <div class="btn-row">
           ${canDownload ? '<button class="btn" type="button" data-act="backup">Download a backup</button>' : ''}
           <label class="btn" for="restoreFile">Restore a backup</label>
@@ -8427,10 +8579,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
           </div>
         </div>
         <p class="small muted">${doc().game ? 'Checked against this warm-up’s rules only. Genre checks come back when you open a normal draft.' : empty ? `Start writing and ${esc(g.name.toLowerCase())} checks will mark your draft as you type.` : `Checked against ${esc(g.name)} rules${frameworkDef() && frameworkDef().structure !== false ? ` and the “${esc(frameworkDef().name)}” framework` : ''}. Hover a highlight to see why.`}</p>
-        ${renderRhythm(state.ctx)}
-        <div class="filters" role="group" aria-label="Show highlights">
-          ${LEVELS.map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
-        </div>
+        ${empty ? '' : `<div class="filters" role="group" aria-label="Show highlights">
+          <span class="filters-label">Highlights</span>
+          ${LEVELS.filter((l) => markCounts[l.id] || !prefs.levels[l.id]).map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
+        </div>`}
         <label class="toggle"><input type="checkbox" id="oneThingToggle" ${prefs.oneThing ? 'checked' : ''}> <span><b>One thing at a time.</b> Show only the most important problem, then the next.</span></label>
         ${prefs.oneThing ? (spot ? `<div class="spotlight-bar"><span>Fix this first: ${esc(spot.title)} <span class="small">(${issuesInOrder(results).findIndex((r) => r.id === spot.id) + 1} of ${issuesInOrder(results).length})</span></span><button class="btn btn-quiet" type="button" data-act="next-thing">Next issue</button></div>` : '<div class="spotlight-bar"><span>Nothing to fix right now. Nice work.</span></div>')
           : spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
@@ -8455,6 +8607,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
             <ul class="waiting-list">${waiting.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ul>
           </details>
         </section>` : ''}
+      ${(() => { const r = empty ? '' : renderRhythm(state.ctx); return r ? `<section class="section">${r}</section>` : ''; })()}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -8560,9 +8713,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
                 <button class="btn ${active ? 'btn-primary' : ''}" type="button" data-fw-insert="${fw.id}">${fw.structure === false ? 'Insert line guide' : 'Insert outline'}</button>
                 <button class="btn" type="button" data-fw-study="${fw.id}">Study the example</button>
-                <button class="btn" type="button" data-fw-example="${fw.id}">Open example</button>
+                <button class="btn" type="button" data-fw-example="${fw.id}">Open example as a draft</button>
               </div>
-              <details class="lesson"><summary>Example</summary><pre class="fw-example">${esc(fw.example)}</pre></details>
             </div>` : ''}
           </div>`;
         }).join('')}
@@ -8645,7 +8797,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         </div>
         <p class="small muted">The checks are rules of thumb, not laws. Professional writers break every one of them, on purpose. Learn the rule first, then decide when to break it.</p>
       </section>
-      <section class="section">
+      <section class="section" id="learnSyntax">
         <p class="eyebrow">How the editor reads your draft</p>
         <ul class="plain-list">
           <li><code>## Heading</code> starts a section or framework beat.</li>
@@ -8662,9 +8814,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)} rules</option>`).join('');
-    $('frameworkChip').innerHTML = fw ? `<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : 'Choose a framework';
-    $('frameworkChip').title = 'Open the Frameworks tab';
+    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(SHORT_NAMES[x.id] || x.name)} rules</option>`).join('');
+    const icon = '<svg class="tool-pill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 12h10M5 18.5h6"/></svg>';
+    $('frameworkChip').innerHTML = fw ? `${icon}<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : `${icon}Choose a framework`;
+    $('frameworkChip').title = fw ? `Framework: ${fw.name}. Open the Frameworks tab` : 'Open the Frameworks tab';
   }
 
   function renderStatusLight() {
@@ -8685,8 +8838,13 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       $('statTime').innerHTML = `<b>${Math.max(1, Math.round(words / 230))} min</b> read`;
     }
     if (words >= 30 && g.id !== 'poetry') {
-      $('statGrade').innerHTML = `Grade <b>${T.readability(ctx).grade.toFixed(1)}</b>`;
-    } else $('statGrade').textContent = '';
+      const grade = T.readability(ctx).grade;
+      $('statGrade').innerHTML = `Reading grade <b>${grade.toFixed(1)}</b>`;
+      $('statGrade').title = `A US school grade of ${Math.max(1, Math.round(grade))} could read this easily. Most popular writing aims for 6 to 9.`;
+    } else {
+      $('statGrade').textContent = '';
+      $('statGrade').title = '';
+    }
     renderGoal(words);
   }
 
@@ -8978,18 +9136,23 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       applyLayout();
     });
     $('themeBtn').addEventListener('click', toggleTheme);
-    $('widthBtn').addEventListener('click', () => {
-      prefs.wide = !prefs.wide;
-      savePrefs();
-      applyLayout();
-      editor.render();
-    });
-    $('frameworkChip').addEventListener('click', () => {
+    const openRight = (tab) => {
       if (window.matchMedia('(max-width: 960px)').matches) $('layout').classList.add('show-right');
       else prefs.showRight = true;
       prefs.focus = false;
-      setTab('right', 'frameworks');
+      setTab('right', tab);
       applyLayout();
+    };
+    $('frameworkChip').addEventListener('click', () => openRight('frameworks'));
+    $('syntaxHelp').addEventListener('click', () => {
+      openRight('learn');
+      const sec = $('learnSyntax');
+      if (sec) {
+        sec.scrollIntoView({ block: 'start' });
+        sec.classList.remove('flash');
+        void sec.offsetWidth;
+        sec.classList.add('flash');
+      }
     });
     $('scrim').addEventListener('click', () => {
       $('layout').classList.remove('show-left', 'show-right');
@@ -9030,6 +9193,13 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     $('modalBody').addEventListener('change', (e) => {
       const m = e.target.name && e.target.name.match(/^disp-(\w+)$/);
       if (!m) return;
+      if (m[1] === 'width') {
+        prefs.wide = e.target.value === 'wide';
+        savePrefs();
+        applyLayout();
+        editor.render();
+        return;
+      }
       prefs.display = Object.assign({ size: 'm', spacing: 'normal', font: 'serif' }, prefs.display, { [m[1]]: e.target.value });
       savePrefs();
       applyDisplay();
@@ -9247,7 +9417,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         const options = g.prompts.filter((p) => p !== state.prompt);
         state.prompt = pick(options);
       } else if (act === 'use-prompt') useStarter('Prompt: ' + state.prompt);
-      else if (act === 'shuffle-idea') state.idea = buildIdea(g);
+      else if (act === 'idea-mode') {
+        prefs.ideaMode = b.dataset.mode;
+        savePrefs();
+      } else if (act === 'shuffle-idea') state.idea = buildIdea(g);
       else if (act === 'use-idea') useStarter('Idea: ' + ideaText(g, state.idea, false));
       else if (act === 'nudge') {
         const options = g.nudges.filter((n) => n !== state.nudge);

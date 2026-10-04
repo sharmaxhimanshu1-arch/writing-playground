@@ -70,13 +70,9 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 <span class="tool-label">Preview</span>
               </button>
-              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing and font">
+              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing, font and page width">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 8 6l5 12M4.8 14h6.4"/><path d="M15 18v-5.5a2.5 2.5 0 0 1 5 0V18M15 15h5"/></svg>
                 <span class="tool-label">Display</span>
-              </button>
-              <button class="tool-btn" id="widthBtn" type="button" aria-pressed="false" title="Wider page">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
-                <span class="tool-label">Wide</span>
               </button>
             </div>
           </div>
@@ -86,7 +82,7 @@
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
           <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start writing here…"></textarea>
         </div>
-        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <span><code>## Heading</code> section</span> <span><code>&gt; note</code> private note</span> <span><code>[CUE]</code> stage direction</span> <span>blank line = new bit or stanza</span></p>
+        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <button class="link-btn" id="syntaxHelp" type="button">Formatting tips</button></p>
       </div>
     </main>
 

@@ -35,6 +35,7 @@
   const GAMES = [
     {
       id: 'six-word',
+      short: 'A whole story in six words.',
       title: 'Six-word story',
       minutes: 3,
       rules: 'Tell a complete story in exactly six words. The legend: “For sale: baby shoes, never worn.”',
@@ -43,6 +44,7 @@
     },
     {
       id: 'fifty',
+      short: 'A whole story in exactly 50 words.',
       title: 'Fifty-word story',
       minutes: 5,
       rules: 'Write a complete story with a beginning, middle and end in exactly fifty words.',
@@ -51,6 +53,7 @@
     },
     {
       id: 'lipogram',
+      short: '40 words, no letter E.',
       title: 'No letter E',
       minutes: 5,
       rules: 'Write at least 40 words without using the letter “e” once. It is the most common letter in English.',
@@ -76,6 +79,7 @@
     },
     {
       id: 'three-words',
+      short: 'One scene, three random words.',
       title: 'Three random words',
       minutes: 5,
       rules: 'Write a short scene (at least 60 words) that uses all three of these words: {words}.',
@@ -108,6 +112,7 @@
     },
     {
       id: 'abc',
+      short: 'Five sentences, A to E.',
       title: 'ABC sentences',
       minutes: 5,
       rules: 'Write five sentences. The first starts with A, the second with B, then C, D and E.',
@@ -141,6 +146,7 @@
     },
     {
       id: 'no-crutches',
+      short: '80 words, no crutch words.',
       title: 'No crutch words',
       minutes: 5,
       rules: 'Write at least 80 words without: very, really, just, thing, stuff, nice, good, bad, a lot.',
@@ -166,6 +172,7 @@
     },
     {
       id: 'five-senses',
+      short: 'One place, all five senses.',
       title: 'Five senses',
       minutes: 5,
       rules: 'Describe one place in five sentences, using all five senses: sight, sound, smell, taste and touch.',
@@ -199,6 +206,7 @@
     },
     {
       id: 'dialogue-only',
+      short: 'A scene told only in dialogue.',
       title: 'Dialogue only',
       minutes: 5,
       rules: 'Write a scene of at least eight lines told only through dialogue. Every line is something a character says, in quotation marks.',

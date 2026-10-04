@@ -20,7 +20,93 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
     essay: ['Make it clearer', 'Add an example', 'Stronger opening', 'Shorter'],
     poetry: ['More concrete images', 'Fit the form', 'Fresher comparison', 'Stronger last line'],
     copy: ['Focus on benefits', 'Punchier', 'Talk to “you”', 'Stronger call to action'],
+    speech: ['Easier to say aloud', 'Stronger opening', 'Add a story', 'Memorable ending'],
+    screenplay: ['Leaner action lines', 'More subtext', 'Sharper dialogue', 'Raise the conflict'],
   };
+
+  // Questions for a self-edit when the AI coach isn't available. One read-through per question.
+  const SELF_EDIT = {
+    comedy: [
+      'Does every joke end on its funniest word?',
+      'Could any setup lose half its words and still work?',
+      'Is there a real attitude (weird, scary, hard, stupid) behind each bit?',
+      'Did you replace every vague word with a name, brand or number?',
+      'Read it aloud: where would you pause for the laugh?',
+    ],
+    video: [
+      'Would the first five seconds stop a stranger from scrolling?',
+      'Does each section give the viewer a reason to keep watching?',
+      'Is every sentence easy to say in one breath?',
+      'Do you talk to “you” more than about yourself?',
+      'Is there one clear thing to do at the end?',
+    ],
+    story: [
+      'Does the first line raise a question?',
+      'What does your main character want, and what stops them?',
+      'Where did you tell a feeling you could show instead?',
+      'Is there at least one detail for a sense other than sight?',
+      'Is the character different at the end from the start?',
+    ],
+    essay: [
+      'Can you say your main point in one sentence, and is it near the top?',
+      'Does every paragraph support that point?',
+      'Is each claim backed by an example, number or source?',
+      'Does each paragraph lead into the next?',
+      'Does the ending leave the reader with something to do or think?',
+    ],
+    poetry: [
+      'Which line could you cut without losing anything?',
+      'Are your images things a reader can see, hear or touch?',
+      'Does each line end on a strong word?',
+      'Is there a comparison nobody has used before?',
+      'Read it aloud: does the sound match the feeling?',
+    ],
+    copy: [
+      'Does the headline promise a clear benefit?',
+      'Do you say “you” more than “we”?',
+      'Is every feature turned into what it does for the reader?',
+      'Is there proof: a number, a name, a result?',
+      'Is the call to action one clear step?',
+    ],
+    speech: [
+      'Does the first line grab the room without “Hi, my name is”?',
+      'Can the audience tell where they are in the talk?',
+      'Is there one story that makes the message stick?',
+      'Is every sentence easy to say out loud?',
+      'Do you end on your message rather than “thank you”?',
+    ],
+    screenplay: [
+      'What does each character want in this scene?',
+      'Could a camera film every action line?',
+      'Does anyone say exactly what they feel? Could they hint instead?',
+      'Does the scene end in a different place from where it started?',
+      'Could any speech be cut in half?',
+    ],
+  };
+
+  function renderSelfEdit(note) {
+    const g = app.genre();
+    const d = app.doc();
+    const qs = SELF_EDIT[g.id] || SELF_EDIT.essay;
+    const done = d.selfEdit || {};
+    const n = qs.filter((_, i) => done[i]).length;
+    const rank = { fail: 0, warn: 1 };
+    const needs = app.results().filter((r) => r.status in rank).sort((a, b) => rank[a.status] - rank[b.status]).slice(0, 3);
+    return `
+      <section class="section">
+        <p class="eyebrow">Be your own editor</p>
+        <p class="small muted">Read your draft once for each question below. One question per read-through works better than looking for everything at once.</p>
+        <ul class="self-edit">${qs.map((q, i) => `<li><label><input type="checkbox" data-self-edit="${i}" ${done[i] ? 'checked' : ''}><span>${esc(q)}</span></label></li>`).join('')}</ul>
+        <p class="small muted">${n === qs.length ? 'All done. Save a version in Drafts so you can see what changed.' : `${n} of ${qs.length} done for this draft.`}</p>
+      </section>
+      ${needs.length ? `<section class="section">
+        <p class="eyebrow">The checks say: fix these first</p>
+        <ol class="plain-list">${needs.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ol>
+      </section>` : ''}
+      <section class="section">
+        <p class="small muted">${esc(note)}</p>
+      </section>`;
+  }
 
   const ERRORS = {
     rate_limited: 'Too many requests right now. Wait a minute, then try again.',
@@ -220,14 +306,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function render() {
     const pane = $('pane-coach');
-    if (!pane || !app) return;
+    if (!pane || !app || !app.doc()) return;
     if (C.status !== 'ready') {
       const msg = {
         loading: 'Connecting to Claude…',
-        absent: 'The coach uses Claude to read your draft the way an editor would: what works, what to fix, and rewrites you can drop in. It runs when you open Writing Playground as a Claude artifact. Everything else on this page works without it.',
-        off: 'The coach is turned off for this page. You can allow it from the page’s Permissions menu, then reload.',
+        absent: 'Open Writing Playground as a Claude artifact to get an AI coach here: a full review of your draft, rewrites of any passage, brainstorming and answers to your questions.',
+        off: 'The AI coach is turned off for this page. Allow it from the page’s Permissions menu, then reload, to get reviews and rewrites here.',
       }[C.status];
-      pane.innerHTML = `<section class="section"><p class="eyebrow">Writing coach</p><p class="lead">${esc(msg)}</p></section>`;
+      pane.innerHTML = C.status === 'loading'
+        ? `<section class="section"><p class="eyebrow">Writing coach</p><p class="lead">${esc(msg)}</p></section>`
+        : renderSelfEdit(msg);
       return;
     }
     const g = app.genre();
@@ -323,6 +411,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function bind() {
     const pane = $('pane-coach');
+    pane.addEventListener('change', (e) => {
+      const i = e.target.dataset && e.target.dataset.selfEdit;
+      if (i == null) return;
+      const d = app.doc();
+      d.selfEdit = Object.assign({}, d.selfEdit, { [i]: e.target.checked });
+      app.persist();
+      render();
+      const box = pane.querySelector(`[data-self-edit="${i}"]`);
+      if (box) box.focus();
+    });
     pane.addEventListener('click', (e) => {
       const t = e.target.closest('button');
       if (!t) return;
