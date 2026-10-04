@@ -208,6 +208,12 @@
         }
         return;
       }
+      const sg = e.target.closest('[data-study-guide]');
+      if (sg) {
+        closeModal();
+        A.startGuide(sg.dataset.studyGuide);
+        return;
+      }
       const b = e.target.closest('[data-study-insert]');
       if (!b) return;
       closeModal();
@@ -550,7 +556,8 @@
       } else if (t.dataset.fwUse) {
         A.useFramework(t.dataset.fwUse);
         toast('Framework set. Insert its outline to track each beat.');
-      } else if (t.dataset.fwInsert) A.insertOutline(t.dataset.fwInsert);
+      } else if (t.dataset.fwGuide) A.startGuide(t.dataset.fwGuide);
+      else if (t.dataset.fwInsert) A.insertOutline(t.dataset.fwInsert);
       else if (t.dataset.fwStudy) A.openStudy(t.dataset.fwStudy);
       else if (t.dataset.jump) {
         const [a, b] = t.dataset.jump.split(':').map(Number);
@@ -560,10 +567,19 @@
       else if (t.dataset.fwExample) A.openExample(t.dataset.fwExample);
     });
 
+    $('guide').addEventListener('click', (e) => {
+      const dot = e.target.closest('[data-guide-beat]');
+      if (dot) return A.guideAction('beat', Number(dot.dataset.guideBeat));
+      const b = e.target.closest('[data-guide]');
+      if (b) A.guideAction(b.dataset.guide);
+    });
     document.addEventListener('keydown', (e) => {
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
-      if (mod && !e.shiftKey && k === 's') {
+      if (e.altKey && !mod && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && A.guideOn()) {
+        e.preventDefault();
+        A.guideAction(e.key === 'ArrowDown' ? 'next' : 'back');
+      } else if (mod && !e.shiftKey && k === 's') {
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');

@@ -18,6 +18,15 @@ module.exports = async (t) => {
   for (const kind of Object.keys(expect)) {
     await fresh();
     t.ok(await page.isVisible('#starter'), `${kind}: starter card shows on an empty draft`);
+    if (kind === 'prompt') {
+      const covered = await page.evaluate(() => {
+        const link = document.getElementById('syntaxHelp');
+        link.scrollIntoView({ block: 'center' });
+        const r = link.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) !== link;
+      });
+      t.ok(!covered, 'starter card does not cover the links under the page');
+    }
     await page.click(`[data-start="${kind}"]`);
     await t.wait(400);
     const r = await page.evaluate(() => ({

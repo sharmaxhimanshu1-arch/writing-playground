@@ -213,6 +213,7 @@
     },
     onCaret(pos) {
       A.updateCursorNote(pos);
+      A.syncGuide();
     },
     onHover(info) {
       const tip = $('tooltip');

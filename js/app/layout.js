@@ -83,6 +83,7 @@
     }
     $('sheet').classList.toggle('wide', prefs.wide);
     renderRails();
+    A.fitStarter(); // the page width changed, so the starter card's height may have too
   }
 
   const TAB_TITLES = { ideas: 'Ideas', practice: 'Practice', drafts: 'Drafts', checks: 'Checks', frameworks: 'Frameworks', coach: 'Coach', learn: 'Learn' };

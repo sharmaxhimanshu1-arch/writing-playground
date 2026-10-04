@@ -111,6 +111,11 @@
 
   /** A mark's note without a leading label that repeats its check's title ("Filler: …" under "Filler words"). */
   function noteText(m) {
+    const title = (m.checkTitle || '').toLowerCase();
+    if (title && m.note.toLowerCase().startsWith(title) && /^[.:]\s/.test(m.note.slice(title.length))) {
+      const rest = m.note.slice(title.length + 2);
+      return rest.charAt(0).toUpperCase() + rest.slice(1);
+    }
     const lead = m.note.match(/^([A-Za-z][\w -]{1,24}):\s+/);
     if (lead && m.checkTitle && m.checkTitle.toLowerCase().startsWith(lead[1].toLowerCase())) {
       const rest = m.note.slice(lead[0].length);

@@ -257,17 +257,28 @@
     const box = $('starter');
     const show = !d.text.trim() && !d.game;
     box.hidden = !show;
-    if (!show) return;
+    if (!show) {
+      $('editorWrap').style.minHeight = '';
+      return;
+    }
     const fw = frameworkDef();
     box.innerHTML = `
       <p class="starter-title">How do you want to start?</p>
       <div class="starter-grid">
+        ${A.canGuide(fw) ? `<button type="button" class="starter-guide" data-start="guide"><b>Guide me step by step</b><span>Write a ${esc(fw.name)} one beat at a time, with a hint and an example for each</span></button>` : ''}
         <button type="button" data-start="prompt"><b>Give me a prompt</b><span>A ready-made idea to write about</span></button>
         <button type="button" data-start="plan"><b>Plan it first</b><span>${A.planFor(genre()).length} quick questions about your piece</span></button>
         <button type="button" data-start="outline"><b>Use an outline</b><span>${fw ? esc(fw.name) + ': fill in each beat' : 'A proven structure to fill in'}</span></button>
         <button type="button" data-start="warmup"><b>Warm up first</b><span>A 3-minute writing game</span></button>
       </div>
       <button type="button" class="starter-skip" data-start="type">Or just start typing</button>`;
+    fitStarter();
+  }
+
+  /** The card floats over the empty editor; make the page tall enough that it never covers what is below. */
+  function fitStarter() {
+    const box = $('starter');
+    $('editorWrap').style.minHeight = box.hidden ? '' : `${box.offsetTop + box.offsetHeight + 24}px`;
   }
 
   function runStarter(kind) {
@@ -288,7 +299,8 @@
         const first = box.querySelector('textarea');
         if (first) first.focus();
       }
-    } else if (kind === 'outline') A.insertOutline(doc().framework);
+    } else if (kind === 'guide') A.startGuide();
+    else if (kind === 'outline') A.insertOutline(doc().framework);
     else if (kind === 'warmup') A.startGame(pick(WP.warmups.list.filter((x) => x.minutes <= 3)).id);
     else $('editor').focus();
     renderStarter();
@@ -297,6 +309,6 @@
   Object.assign(A, {
     renderProgress, buildIdea, ideaText, renderIdeas, todaysChallenge, renderChallengeCard,
     startChallenge, checkChallenge, useStarter, startFreshDraft, startSprint, stopSprint,
-    tickSprint, renderStarter, runStarter
+    tickSprint, renderStarter, fitStarter, runStarter
   });
 })(window.WP = window.WP || {});
