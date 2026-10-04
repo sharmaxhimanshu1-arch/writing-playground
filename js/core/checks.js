@@ -67,9 +67,30 @@
     };
   };
 
+  /** Matches "very tired", "really big"… where one stronger word exists. */
+  function intensifierRegex() {
+    return new RegExp('\\b(' + lex.intensifiers.join('|') + ')\\s+(' + Object.keys(lex.strongWords).join('|') + ')\\b', 'gi');
+  }
+
+  C.strongWords = () =>
+    C.phrases({
+      id: 'strong-words',
+      title: 'Stronger words',
+      why: '“Very” and “really” prop up a weak word. One precise word is shorter and hits harder: “very tired” → “exhausted”, “really big” → “huge”. Mark Twain’s joke: substitute “damn” every time you’re inclined to write “very”; your editor will delete it and the writing will be just as it should be.',
+      re: intensifierRegex(),
+      level: 'warn',
+      note: (h) => `${quote(h.text)} → try “${lex.strongWords[h.groups[2].toLowerCase()]}”.`,
+      fixes: (h) => [{ label: `Use “${lex.strongWords[h.groups[2].toLowerCase()]}”`, text: lex.strongWords[h.groups[2].toLowerCase()] }],
+      grade: (n) => ({
+        status: n === 0 ? 'pass' : n <= 2 ? 'warn' : 'fail',
+        summary: n ? `${plural(n, 'weak pair')} with a stronger single word.` : 'No “very + word” pairs.',
+      }),
+    });
+
   C.filler = (o = {}) =>
     C.phrases({
       id: 'filler',
+      filter: (h, ctx) => !intensifierRegex().test(ctx.masked.slice(h.start, h.end + 20)),
       title: 'Filler words',
       why: 'Words like “very”, “really” and “just” pad a sentence without adding meaning. Cut them, or swap the pair for one stronger word (“very tired” → “exhausted”).',
       list: lex.filler,

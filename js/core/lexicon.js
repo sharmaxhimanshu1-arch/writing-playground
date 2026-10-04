@@ -130,6 +130,23 @@
       'sea of tears', 'river of tears', 'eyes like stars', 'lips like roses', 'to the end of time',
       'love is blind', 'heart and soul', 'shattered heart', 'darkest hour', 'endless night'],
 
+    /** Weak intensifier + adjective → one stronger word. */
+    strongWords: {
+      tired: 'exhausted', big: 'huge', large: 'enormous', small: 'tiny', good: 'excellent', bad: 'awful',
+      happy: 'delighted', sad: 'miserable', angry: 'furious', scared: 'terrified', afraid: 'terrified',
+      cold: 'freezing', hot: 'scorching', hungry: 'starving', old: 'ancient', fast: 'rapid', quick: 'swift',
+      slow: 'sluggish', tall: 'towering', loud: 'deafening', quiet: 'hushed', pretty: 'gorgeous',
+      beautiful: 'stunning', ugly: 'hideous', smart: 'brilliant', important: 'crucial', easy: 'effortless',
+      hard: 'grueling', difficult: 'arduous', boring: 'tedious', funny: 'hilarious', interesting: 'fascinating',
+      nice: 'lovely', clean: 'spotless', dirty: 'filthy', wet: 'soaked', dry: 'parched', rich: 'wealthy',
+      poor: 'penniless', busy: 'swamped', sure: 'certain', surprised: 'astonished', worried: 'anxious',
+      excited: 'thrilled', bright: 'dazzling', dark: 'pitch-black', strong: 'powerful', weak: 'frail',
+      thin: 'gaunt', clear: 'obvious', simple: 'basic', shy: 'timid', sleepy: 'drowsy', full: 'stuffed',
+      empty: 'deserted', sick: 'ill', upset: 'distraught', bored: 'restless', crowded: 'packed', fun: 'thrilling',
+      serious: 'grave', careful: 'cautious', different: 'distinct', famous: 'renowned', glad: 'overjoyed',
+    },
+    intensifiers: ['very', 'really', 'extremely', 'super', 'incredibly', 'so'],
+
     youWords: /\b(you|your|yours|you're|you’re|yourself|you'll|you’ll|you've|you’ve)\b/gi,
     meWords: /\b(i|me|my|mine|myself|i'm|i’m|i've|i’ve|i'll|i’ll|i'd|i’d)\b/gi,
     weWords: /\b(we|our|ours|us|we're|we’re|we've|we’ve|we'll|we’ll|ourselves)\b/gi,

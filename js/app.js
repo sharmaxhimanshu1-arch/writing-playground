@@ -49,6 +49,8 @@
     focus: false,
     wide: false,
     theme: null,
+    display: { size: 'm', spacing: 'normal', font: 'serif' },
+    rhythmOpen: false,
     goal: 0,
     days: {},
     drillsDone: [],
@@ -398,6 +400,167 @@
     prefs.theme = current === 'dark' ? 'light' : 'dark';
     savePrefs();
     applyTheme();
+  }
+
+  /* ---------- display settings ---------- */
+
+  const DISPLAY = {
+    size: { s: ['Small', '1.0625rem'], m: ['Medium', '1.1875rem'], l: ['Large', '1.375rem'], xl: ['Extra large', '1.5625rem'] },
+    spacing: { normal: ['Normal', '1.75'], relaxed: ['Relaxed', '2.05'] },
+    font: {
+      serif: ['Book serif', 'var(--font-editor)'],
+      easy: ['Easy-read', 'var(--font-ui)'],
+      mono: ['Typewriter', 'var(--font-mono)'],
+    },
+  };
+
+  function applyDisplay() {
+    const d = Object.assign({ size: 'm', spacing: 'normal', font: 'serif' }, prefs.display);
+    const root = document.documentElement.style;
+    if (d.size === 'm') root.removeProperty('--editor-size');
+    else root.setProperty('--editor-size', DISPLAY.size[d.size][1]);
+    root.setProperty('--editor-leading', DISPLAY.spacing[d.spacing][1]);
+    root.setProperty('--font-page', DISPLAY.font[d.font][1]);
+    editor.render();
+  }
+
+  function openDisplay() {
+    const d = Object.assign({ size: 'm', spacing: 'normal', font: 'serif' }, prefs.display);
+    const group = (key, label) => `<fieldset class="seg">
+        <legend>${label}</legend>
+        ${Object.entries(DISPLAY[key]).map(([v, [name]]) => `<label><input type="radio" name="disp-${key}" value="${v}" ${d[key] === v ? 'checked' : ''}><span>${name}</span></label>`).join('')}
+      </fieldset>`;
+    openModal('Display', `
+      <form id="displayForm" class="display-form">
+        ${group('size', 'Text size')}
+        ${group('spacing', 'Line spacing')}
+        ${group('font', 'Font')}
+        <p class="small muted">Easy-read uses Atkinson Hyperlegible, a typeface designed for readers with low vision. These settings only change how the page looks to you.</p>
+      </form>`);
+  }
+
+  /* ---------- keyboard shortcuts ---------- */
+
+  const MOD = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘' : 'Ctrl';
+
+  function openShortcuts() {
+    const rows = [
+      [`${MOD} + S`, 'Save now (drafts also save automatically)'],
+      [`${MOD} + Z`, 'Undo, including one-click fixes and rewrites'],
+      [`${MOD} + .`, 'Next issue (turns on “One thing at a time”)'],
+      [`${MOD} + Shift + F`, 'Focus mode: hide both panels'],
+      [`${MOD} + Shift + L`, 'Listen: read the draft or selection aloud'],
+      [`${MOD} + /`, 'Show these shortcuts'],
+      ['Tab', 'Insert a tab in the draft'],
+      ['Esc', 'Close a popup, dismiss a fix card, or clear a spotlight'],
+    ];
+    openModal('Keyboard shortcuts', `<dl class="shortcuts">${rows.map(([k, v]) => `<div><dt><kbd>${esc(k)}</kbd></dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`);
+  }
+
+  /* ---------- study a framework example ---------- */
+
+  function sectionsOf(text) {
+    const out = [];
+    let cur = null;
+    for (const line of text.split('\n')) {
+      const m = line.match(/^##\s+(.*)$/);
+      if (m) out.push((cur = { title: m[1].trim(), body: [] }));
+      else if (cur) cur.body.push(line);
+    }
+    return out.map((x) => ({ title: x.title, body: x.body.join('\n').trim() }));
+  }
+
+  function openStudy(id) {
+    const g = genre();
+    const fw = g.frameworks.find((f) => f.id === id);
+    const secs = sectionsOf(fw.example);
+    const norm = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const body = secs.length
+      ? fw.beats.map((b, i) => {
+        const sec = secs.find((x) => norm(x.title).includes(norm(b.name)) || norm(b.name).includes(norm(x.title))) || secs[i];
+        return `<div class="study-beat">
+          <div class="study-label"><span class="path-num">${i + 1}</span><b>${esc(b.name)}</b></div>
+          <p class="small muted"><b>This beat’s job:</b> ${esc(b.hint)}</p>
+          <pre class="study-text">${esc(sec ? sec.body.replace(/^>.*$/gm, '').trim() || sec.body : '')}</pre>
+        </div>`;
+      }).join('')
+      : `<pre class="study-text">${esc(fw.example)}</pre>
+         <ol class="plain-list">${fw.beats.map((b) => `<li><b>${esc(b.name)}:</b> ${esc(b.hint)}</li>`).join('')}</ol>`;
+    openModal(`Study: ${fw.name}`, `
+      <p class="small muted">${esc(fw.summary)} Read each beat and its job, then try writing your own version.</p>
+      ${body}
+      <div class="btn-row"><button class="btn btn-primary" type="button" data-study-insert="${fw.id}">Write my own with this outline</button></div>`);
+  }
+
+  /* ---------- outline of the current draft ---------- */
+
+  function renderOutline(ctx) {
+    if (!ctx || ctx.paragraphs.length < 2) return '';
+    const items = [];
+    let hi = 0;
+    for (const p of ctx.paragraphs) {
+      while (hi < ctx.headings.length && ctx.headings[hi].start < p.start) {
+        const h = ctx.headings[hi++];
+        items.push(`<li class="ol-head"><button type="button" data-jump="${h.start}:${h.end}">${esc(h.title)}</button></li>`);
+      }
+      const s0 = p.sentences[0];
+      if (!s0) continue;
+      const t = s0.text.replace(/\s+/g, ' ').trim();
+      items.push(`<li><button type="button" data-jump="${s0.start}:${s0.end}"><span>${esc(t.length > 90 ? t.slice(0, 88) + '…' : t)}</span><span class="ol-words">${p.words.length}</span></button></li>`);
+    }
+    return `<section class="section">
+        <p class="eyebrow">Your draft’s outline</p>
+        <p class="small muted">The first sentence of each paragraph. Read them in order: if the story or argument still makes sense, your structure works. Click one to jump to it.</p>
+        <ol class="outline">${items.join('')}</ol>
+      </section>`;
+  }
+
+  /* ---------- sentence rhythm chart ---------- */
+
+  function renderRhythm(ctx) {
+    if (!ctx || ctx.sentences.length < 3 || doc().game) return '';
+    const g = genre();
+    const limit = { video: 20, speech: 20, copy: 18, comedy: 22 }[g.id] || 25;
+    const lens = ctx.sentences.map((x) => x.words.length);
+    const n = lens.length;
+    const W = 360;
+    const H = 72;
+    const gap = n > 60 ? 1 : 2;
+    const bw = Math.max(1, (W - gap * (n - 1)) / n);
+    const top = Math.max(limit + 5, ...lens);
+    const y = (v) => H - (v / top) * (H - 6);
+    const bars = lens.map((v, i) => {
+      const x = i * (bw + gap);
+      const h = Math.max(2, H - y(v));
+      return `<rect class="${v > limit ? 'over' : 'ok'}" x="${x.toFixed(1)}" y="${(H - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${bw > 6 ? 2 : 0}"></rect>
+        <rect class="bar-hit" x="${(x - gap / 2).toFixed(1)}" y="0" width="${(bw + gap).toFixed(1)}" height="${H}" data-sent="${i}" data-tip="Sentence ${i + 1}: ${v} words"></rect>`;
+    }).join('');
+    const mean = lens.reduce((a, b) => a + b, 0) / n;
+    return `<details class="rhythm" id="rhythmBox" ${prefs.rhythmOpen ? 'open' : ''}>
+        <summary>Sentence rhythm <span class="small muted">${n} sentences</span></summary>
+        <svg class="rhythm-chart" viewBox="0 0 ${W} ${H + 2}" role="img" aria-label="Sentence lengths: shortest ${Math.min(...lens)}, longest ${Math.max(...lens)}, average ${mean.toFixed(0)} words.">
+          <line class="limit" x1="0" x2="${W}" y1="${y(limit).toFixed(1)}" y2="${y(limit).toFixed(1)}"></line>
+          ${bars}
+        </svg>
+        <p class="small muted">Each bar is one sentence, in order; taller means longer. Bars above the dashed line are over ${limit} words. Shortest ${Math.min(...lens)}, longest ${Math.max(...lens)}, average ${mean.toFixed(0)}. A good rhythm looks like a skyline, not a flat wall. Writing teacher Gary Provost made the point that same-length sentences drone; mix short and long, and prose starts to sound like music. Click a bar to find that sentence.</p>
+      </details>`;
+  }
+
+  /* ---------- import ---------- */
+
+  function importFile(file) {
+    if (!file) return;
+    if (file.size > 1024 * 1024) return toast('That file is over 1 MB. Paste the part you want to work on instead.');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || '').replace(/\r\n?/g, '\n');
+      const d = newDoc(genre().id, { title: file.name.replace(/\.(txt|md|markdown)$/i, ''), text });
+      persist(true);
+      openDoc(d.id);
+      toast(`Opened “${file.name}” as a new draft.`);
+    };
+    reader.onerror = () => toast('That file could not be read. Try a plain .txt or .md file.');
+    reader.readAsText(file);
   }
 
   /* ---------- tabs ---------- */
@@ -1067,6 +1230,8 @@
       <section class="section">
         <div class="btn-row">
           <button class="btn btn-primary" type="button" data-act="new-draft">New ${esc(genre().name)} draft</button>
+          <label class="btn" for="importFile">Open a file</label>
+          <input type="file" id="importFile" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         </div>
         <ul class="draft-list">${items}</ul>
         <p class="small muted">Drafts are saved in this browser only. Copy or download anything you want to keep elsewhere.</p>
@@ -1189,6 +1354,7 @@
           </div>
         </div>
         <p class="small muted">${doc().game ? 'Checked against this warm-up’s rules only. Genre checks come back when you open a normal draft.' : empty ? `Start writing and ${esc(g.name.toLowerCase())} checks will mark your draft as you type.` : `Checked against ${esc(g.name)} rules${frameworkDef() && frameworkDef().structure !== false ? ` and the “${esc(frameworkDef().name)}” framework` : ''}. Hover a highlight to see why.`}</p>
+        ${renderRhythm(state.ctx)}
         <div class="filters" role="group" aria-label="Show highlights">
           ${LEVELS.map((l) => `<button type="button" class="filter" data-level="${l.id}" aria-pressed="${prefs.levels[l.id]}"><span class="swatch swatch-${l.id}"></span>${l.label} <span class="count">${markCounts[l.id]}</span></button>`).join('')}
         </div>
@@ -1282,6 +1448,7 @@
         <p class="eyebrow">${esc(g.name)} frameworks</p>
         <p class="small muted">A framework is a proven shape for a piece of writing. Pick one, insert its outline, and fill each beat. The checker tracks which beats you have written.</p>
       </section>
+      ${renderOutline(ctx)}
       <section class="section">
         ${g.frameworks.map((fw) => {
           const open = state.openFramework === fw.id;
@@ -1303,6 +1470,7 @@
               <div class="btn-row">
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
                 <button class="btn ${active ? 'btn-primary' : ''}" type="button" data-fw-insert="${fw.id}">${fw.structure === false ? 'Insert line guide' : 'Insert outline'}</button>
+                <button class="btn" type="button" data-fw-study="${fw.id}">Study the example</button>
                 <button class="btn" type="button" data-fw-example="${fw.id}">Open example</button>
               </div>
               <details class="lesson"><summary>Example</summary><pre class="fw-example">${esc(fw.example)}</pre></details>
@@ -1396,6 +1564,7 @@
           <li><code>[B-ROLL: city at night]</code> is a cue or stage direction, not spoken text.</li>
           <li>A blank line separates paragraphs, jokes (bits) and stanzas.</li>
         </ul>
+        <div class="btn-row"><button class="btn" type="button" data-act="shortcuts">Keyboard shortcuts</button></div>
       </section>`;
   }
 
@@ -1722,6 +1891,30 @@
     });
     $('desk').addEventListener('scroll', placeFixCard, { passive: true });
 
+    $('displayBtn').addEventListener('click', openDisplay);
+    $('modalBody').addEventListener('change', (e) => {
+      const m = e.target.name && e.target.name.match(/^disp-(\w+)$/);
+      if (!m) return;
+      prefs.display = Object.assign({ size: 'm', spacing: 'normal', font: 'serif' }, prefs.display, { [m[1]]: e.target.value });
+      savePrefs();
+      applyDisplay();
+    });
+    $('modalBody').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-study-insert]');
+      if (!b) return;
+      closeModal();
+      closeDrawers();
+      insertOutline(b.dataset.studyInsert);
+    });
+    $('pane-drafts').addEventListener('change', (e) => {
+      if (e.target.id === 'importFile') importFile(e.target.files && e.target.files[0]);
+    });
+    $('pane-checks').addEventListener('toggle', (e) => {
+      if (e.target.id === 'rhythmBox') {
+        prefs.rhythmOpen = e.target.open;
+        savePrefs();
+      }
+    }, true);
     $('modalClose').addEventListener('click', closeModal);
     $('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') closeModal();
@@ -1750,6 +1943,7 @@
       }
     });
     $('pane-learn').addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="shortcuts"]')) return openShortcuts();
       if (e.target.closest('[data-act="tour"]')) {
         closeDrawers();
         startTour();
@@ -1775,6 +1969,7 @@
       });
     };
     chartTip($('pane-drafts'));
+    chartTip($('pane-checks'));
 
     $('pane-checks').addEventListener('change', (e) => {
       if (e.target.id !== 'oneThingToggle') return;
@@ -1920,6 +2115,15 @@
       const unmute = e.target.closest('[data-unmute]');
       if (unmute) return setMuted(unmute.dataset.unmute, false);
       if (e.target.closest('[data-act="next-thing"]')) return nextOneThing();
+      const sent = e.target.closest('[data-sent]');
+      if (sent && state.ctx) {
+        const x = state.ctx.sentences[Number(sent.dataset.sent)];
+        if (x) {
+          closeDrawers();
+          editor.reveal(x.start, x.end);
+        }
+        return;
+      }
       const fixBtn = e.target.closest('[data-fix]');
       if (fixBtn) {
         const [mi, fi] = fixBtn.dataset.fix.split(':').map(Number);
@@ -1980,14 +2184,42 @@
         useFramework(t.dataset.fwUse);
         toast('Framework set. Insert its outline to track each beat.');
       } else if (t.dataset.fwInsert) insertOutline(t.dataset.fwInsert);
+      else if (t.dataset.fwStudy) openStudy(t.dataset.fwStudy);
+      else if (t.dataset.jump) {
+        const [a, b] = t.dataset.jump.split(':').map(Number);
+        closeDrawers();
+        editor.reveal(a, b);
+      }
       else if (t.dataset.fwExample) openExample(t.dataset.fwExample);
     });
 
     document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      const mod = e.ctrlKey || e.metaKey;
+      const k = e.key.toLowerCase();
+      if (mod && !e.shiftKey && k === 's') {
         e.preventDefault();
         persist(true);
         toast('Saved in this browser.');
+      } else if (mod && k === '/') {
+        e.preventDefault();
+        openShortcuts();
+      } else if (mod && k === '.') {
+        e.preventDefault();
+        if (!prefs.oneThing) {
+          prefs.oneThing = true;
+          savePrefs();
+          pickOneThing(state.results);
+          applyFilters();
+          renderChecks();
+        } else nextOneThing();
+      } else if (mod && e.shiftKey && k === 'f') {
+        e.preventDefault();
+        prefs.focus = !prefs.focus;
+        savePrefs();
+        applyLayout();
+      } else if (mod && e.shiftKey && k === 'l' && canSpeak) {
+        e.preventDefault();
+        toggleListen();
       } else if (e.key === 'Escape' && !$('modal').hidden) {
         closeModal();
       } else if (e.key === 'Escape' && tourStep >= 0) {
@@ -2012,6 +2244,7 @@
     if (!state.docs.length) sampleDoc('comedy');
     applyTheme();
     bind();
+    applyDisplay();
     WP.coach.init(api);
     if (window.claude && typeof window.claude.use === 'function') {
       window.claude.use('downloads').then((d) => {
