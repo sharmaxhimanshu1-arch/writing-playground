@@ -82,14 +82,23 @@ js/ui/coach.js        AI coach (uses the Claude artifact runtime when available)
 js/app.js             panels, drafts, prompts, sprints, wiring
 scripts/build.js      bundles everything into dist/*.html
 tests/run-checks.js   runs every genre's checks against its examples
+tests/e2e/            browser tests (Playwright) and their runner
 ```
 
 ## Development
 
 ```bash
-npm test         # run all checks against samples, framework examples, drills and warm-ups
-npm run build    # rebuild dist/writing-playground.html after changing anything
+npm install                      # once: installs Playwright for the browser tests
+npx playwright install chromium  # once: the browser it drives
+npm test                         # rule checks: samples, framework examples, drills and warm-ups
+npm run build                    # rebuild dist/ after changing anything
+npm run e2e                      # browser tests: click through the real page in Chromium
+npm run e2e -- starter           # only the browser tests whose file name contains "starter"
 ```
+
+Browser tests live in `tests/e2e/*.test.js`. Each file exports `async (t) => {…}`; `t.page()` opens a fresh browser profile, `t.ok()` / `t.eq()` record checks, and any error thrown on the page fails the file. Screenshots go to `tests/e2e/output/`.
+
+Every pull request runs `npm test`, checks that `dist/` was rebuilt, and runs the browser tests (`.github/workflows/ci.yml`). If a browser test fails there, its screenshots are attached to the run.
 
 ### Adding a genre
 
