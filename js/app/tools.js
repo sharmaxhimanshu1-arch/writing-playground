@@ -91,6 +91,7 @@
       [`${MOD} + S`, 'Save now (drafts also save automatically)'],
       [`${MOD} + Z`, 'Undo, including one-click fixes and rewrites'],
       [`${MOD} + .`, 'Next issue (turns on “One thing at a time”)'],
+      ['Alt + ↓ / ↑', 'Guided writing: next or previous beat'],
       [`${MOD} + Shift + F`, 'Focus mode: hide both panels'],
       [`${MOD} + Shift + L`, 'Listen: read the draft or selection aloud'],
       [`${MOD} + /`, 'Show these shortcuts'],

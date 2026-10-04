@@ -54,7 +54,7 @@
     openModal(`Study: ${fw.name}`, `
       <p class="small muted">${esc(fw.summary)} Read each beat and its job, then try writing your own version.</p>
       ${body}
-      <div class="btn-row"><button class="btn btn-primary" type="button" data-study-insert="${fw.id}">Write my own with this outline</button></div>`);
+      <div class="btn-row">${A.canGuide(fw) ? `<button class="btn btn-primary" type="button" data-study-guide="${fw.id}">Write my own, step by step</button>` : ''}<button class="btn ${A.canGuide(fw) ? '' : 'btn-primary'}" type="button" data-study-insert="${fw.id}">Insert the outline</button></div>`);
   }
 
   /* ---------- outline of the current draft ---------- */
@@ -115,7 +115,8 @@
               }).join('')}</ol>
               <div class="btn-row">
                 ${active ? '' : `<button class="btn btn-primary" type="button" data-fw-use="${fw.id}">Use this framework</button>`}
-                <button class="btn ${active ? 'btn-primary' : ''}" type="button" data-fw-insert="${fw.id}">${fw.structure === false ? 'Insert line guide' : 'Insert outline'}</button>
+                ${A.canGuide(fw) ? `<button class="btn btn-primary" type="button" data-fw-guide="${fw.id}">Write it step by step</button>` : ''}
+                <button class="btn ${active && !A.canGuide(fw) ? 'btn-primary' : ''}" type="button" data-fw-insert="${fw.id}">${fw.structure === false ? 'Insert line guide' : 'Insert outline'}</button>
                 <button class="btn" type="button" data-fw-study="${fw.id}">Study the example</button>
                 <button class="btn" type="button" data-fw-example="${fw.id}">Open example as a draft</button>
               </div>

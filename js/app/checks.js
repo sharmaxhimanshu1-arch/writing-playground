@@ -59,6 +59,7 @@
     A.renderStatus();
     if (prefs.rightTab === 'frameworks') A.renderFrameworks();
     if (prefs.leftTab === 'practice') A.renderPractice();
+    A.renderGuide();
   }
 
   /* ---------- sentence rhythm chart ---------- */
