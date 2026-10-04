@@ -44,8 +44,8 @@
   const prefs = Object.assign({
     leftTab: 'ideas',
     rightTab: 'checks',
-    showLeft: true,
-    showRight: true,
+    showLeft: false,
+    showRight: false,
     focus: false,
     wide: false,
     theme: null,
@@ -63,6 +63,12 @@
     warmups: {},
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
+  // Layout 2 starts with both side panels closed, behind the icon rails, for a calmer first screen.
+  if (prefs.layout !== 2) {
+    prefs.showLeft = false;
+    prefs.showRight = false;
+    prefs.layout = 2;
+  }
 
   const state = {
     docs: load(STORE_DOCS, []),
@@ -227,6 +233,18 @@
   });
 
   WP.editorInstance = editor;
+  // Opens a panel on a tab (never closes it). Used by tests and handy from the console.
+  WP.openTab = (tab) => {
+    const side = ['ideas', 'practice', 'drafts'].includes(tab) ? 'left' : 'right';
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left', 'show-right');
+      $('layout').classList.add(side === 'left' ? 'show-left' : 'show-right');
+    } else if (side === 'left') prefs.showLeft = true;
+    else prefs.showRight = true;
+    prefs.focus = false;
+    setTab(side, tab);
+    applyLayout();
+  };
 
   function levelRank(l) {
     return { bad: 4, warn: 3, good: 2, info: 1 }[l] || 0;
@@ -369,18 +387,7 @@
 
   function renderGenreTabs() {
     const g = genre();
-    $('genreTabs').innerHTML = WP.genres.map((x) => `
-      <button type="button" class="genre-tab" data-genre="${x.id}" aria-pressed="${x.id === g.id}" title="${esc(x.name)}: ${esc(x.tagline)}">${esc(SHORT_NAMES[x.id] || x.name)}</button>`).join('');
     $('genreSelect').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-    fitTopbar();
-  }
-
-  /** Swaps the genre tabs for a dropdown when they don't fit. */
-  function fitTopbar() {
-    const bar = document.querySelector('.topbar');
-    bar.classList.remove('compact');
-    const tabs = $('genreTabs');
-    if (tabs.scrollWidth > tabs.clientWidth + 2) bar.classList.add('compact');
   }
 
   /** Genre tabs open that genre's workspace: its latest draft, or an example on first visit. */
@@ -437,6 +444,37 @@
       $('toggleRight').setAttribute('aria-expanded', String(prefs.showRight && !prefs.focus));
     }
     $('sheet').classList.toggle('wide', prefs.wide);
+    renderRails();
+  }
+
+  const TAB_TITLES = { ideas: 'Ideas', practice: 'Practice', drafts: 'Drafts', checks: 'Checks', frameworks: 'Frameworks', coach: 'Coach', learn: 'Learn' };
+
+  /** The icon rails mirror which panel is open and on which tab. */
+  function renderRails() {
+    const leftOpen = prefs.showLeft && !prefs.focus;
+    const rightOpen = prefs.showRight && !prefs.focus;
+    document.querySelectorAll('.rail-btn').forEach((b) => {
+      const [side, tab] = b.dataset.rail.split(':');
+      const on = side === 'left' ? leftOpen && prefs.leftTab === tab : rightOpen && prefs.rightTab === tab;
+      b.setAttribute('aria-pressed', String(on));
+    });
+    $('leftTitle').textContent = TAB_TITLES[prefs.leftTab] || '';
+    $('rightTitle').textContent = TAB_TITLES[prefs.rightTab] || '';
+  }
+
+  /** Rail buttons open their panel on that tab, or close it if it is already showing. */
+  function railToggle(side, tab) {
+    const key = side === 'left' ? 'showLeft' : 'showRight';
+    const current = side === 'left' ? prefs.leftTab : prefs.rightTab;
+    if (prefs[key] && !prefs.focus && current === tab) prefs[key] = false;
+    else {
+      prefs[key] = true;
+      // On smaller laptops two open panels squeeze the page, so one at a time.
+      if (window.innerWidth < 1280) prefs[side === 'left' ? 'showRight' : 'showLeft'] = false;
+    }
+    prefs.focus = false;
+    setTab(side, tab);
+    applyLayout();
   }
 
   function togglePanel(side) {
@@ -801,6 +839,7 @@
   }
 
   function renderTabs() {
+    if ($('leftTitle')) renderRails();
     document.querySelectorAll('#leftPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.leftTab)));
     document.querySelectorAll('#rightPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.rightTab)));
     $('pane-ideas').hidden = prefs.leftTab !== 'ideas';
@@ -1071,15 +1110,16 @@
 
   const TOUR = [
     { title: 'Welcome to your writing playground', body: 'A place to practice writing with guidance. Pick a kind of writing, use a proven structure, and get feedback as you type. This tour takes 30 seconds.' },
-    { target: '#genreTabs', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
-    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule.' },
+    { target: '.genre-pick', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
+    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule. Open them any time from the icons on the left edge.' },
     { target: '#sheet', title: '3. Write, and watch the highlights', body: 'Green means you’re following a rule, amber means take a look, red means it breaks a rule. Click a highlight to see why and fix it in one click. Listen reads your draft aloud.' },
-    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach (inside Claude) reviews your draft like an editor. Learn explains the basics.' },
+    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach reviews your draft. Learn explains the basics. They live behind the icons on the right edge; the number on Checks is your live score.' },
     { title: 'Start small', body: 'The best first step is a five-minute win. Try one drill, or take today’s challenge.', final: true },
   ];
   let tourStep = -1;
 
   function startTour() {
+    if (tourStep < 0) state.tourPanels = { left: prefs.showLeft, right: prefs.showRight, leftTab: prefs.leftTab, rightTab: prefs.rightTab };
     tourStep = 0;
     renderTour();
   }
@@ -1089,6 +1129,16 @@
     document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
     $('tour').hidden = true;
     prefs.toured = true;
+    // Put the panels back the way they were, so the tour doesn't leave the screen busier than it found it.
+    if (state.tourPanels) {
+      prefs.showLeft = state.tourPanels.left;
+      prefs.showRight = state.tourPanels.right;
+      prefs.leftTab = state.tourPanels.leftTab;
+      prefs.rightTab = state.tourPanels.rightTab;
+      state.tourPanels = null;
+      renderTabs();
+      applyLayout();
+    }
     savePrefs();
   }
 
@@ -1098,9 +1148,15 @@
     if (!step) return endTour();
     const narrow = window.matchMedia('(max-width: 960px)').matches;
     if (step.side && !narrow) {
-      if (step.side === 'left') prefs.showLeft = true;
-      else prefs.showRight = true;
+      if (step.side === 'left') {
+        prefs.showLeft = true;
+        prefs.leftTab = 'ideas';
+      } else {
+        prefs.showRight = true;
+        prefs.rightTab = 'checks';
+      }
       prefs.focus = false;
+      renderTabs();
       applyLayout();
     }
     const target = step.target && document.querySelector(step.target);
@@ -1479,6 +1535,9 @@
       ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
+        <label class="field" for="checkAsSelect">Check it as
+          <select id="checkAsSelect" title="Which genre’s rules check this draft">${WP.genres.map((x) => `<option value="${x.id}" ${x.id === genre().id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        </label>
         <div class="btn-row">
           <button class="btn" type="button" data-act="copy">Copy text</button>
           <button class="btn" type="button" data-act="duplicate">Make a copy</button>
@@ -1650,6 +1709,9 @@
     results.forEach((r) => r.marks.forEach((m) => markCounts[m.level]++));
     const g = genre();
     $('tabScore').textContent = state.score == null ? '' : state.score;
+    $('railScore').textContent = state.score == null ? '' : state.score;
+    $('railScore').className = 'rail-score' + (state.score == null ? '' : state.score >= 75 ? ' good' : state.score >= 50 ? ' ok' : ' low');
+    $('rail-checks').title = state.score == null ? 'Checks' : `Checks: score ${state.score}, ${needsCount(results)} to fix`;
 
     // Issues first; what's already fine, tips and not-yet-active checks fold away below.
     const needs = results.filter((r) => r.status === 'fail' || r.status === 'warn').sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
@@ -1717,6 +1779,10 @@
       if (el) el.remove();
     }, 2400 - (Date.now() - dl.at));
     return `<span class="score-delta ${dl.v > 0 ? 'up' : 'down'}" aria-hidden="true">${dl.v > 0 ? '+' : '−'}${Math.abs(dl.v)}</span>`;
+  }
+
+  function needsCount(results) {
+    return results.filter((r) => r.status === 'fail' || r.status === 'warn').length;
   }
 
   function renderMuted() {
@@ -1921,7 +1987,6 @@
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(SHORT_NAMES[x.id] || x.name)} rules</option>`).join('');
     const icon = '<svg class="tool-pill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 12h10M5 18.5h6"/></svg>';
     $('frameworkChip').innerHTML = fw ? `${icon}<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : `${icon}Choose a framework`;
     $('frameworkChip').title = fw ? `Framework: ${fw.name}. Open the Frameworks tab` : 'Open the Frameworks tab';
@@ -2265,10 +2330,20 @@
   /* ---------- events ---------- */
 
   function bind() {
-    $('genreTabs').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-genre]');
-      if (b) setGenre(b.dataset.genre);
-    });
+    document.querySelectorAll('.rail').forEach((rail) => rail.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rail]');
+      if (!b) return;
+      const [side, tab] = b.dataset.rail.split(':');
+      railToggle(side, tab);
+    }));
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.close === 'left') prefs.showLeft = false;
+      else prefs.showRight = false;
+      savePrefs();
+      applyLayout();
+      const rail = $('rail-' + (b.dataset.close === 'left' ? prefs.leftTab : prefs.rightTab));
+      if (rail) rail.focus();
+    }));
     $('toggleLeft').addEventListener('click', () => togglePanel('left'));
     $('toggleRight').addEventListener('click', () => togglePanel('right'));
     $('focusBtn').addEventListener('click', () => {
@@ -2301,7 +2376,6 @@
     });
     window.addEventListener('resize', () => {
       applyLayout();
-      fitTopbar();
       editor.render();
     });
 
@@ -2311,7 +2385,6 @@
       setTab(tabs.closest('.panel').id === 'leftPanel' ? 'left' : 'right', b.dataset.tab);
     }));
 
-    $('genreChip').addEventListener('change', (e) => checkAs(e.target.value));
     $('listenBtn').hidden = !canSpeak;
     $('listenBtn').addEventListener('click', toggleListen);
     $('editor').addEventListener('click', showFixCard);
@@ -2375,6 +2448,7 @@
     $('pane-drafts').addEventListener('change', (e) => {
       if (e.target.id === 'importFile') importFile(e.target.files && e.target.files[0]);
       if (e.target.id === 'restoreFile') restoreBackup(e.target.files && e.target.files[0]);
+      if (e.target.id === 'checkAsSelect') checkAs(e.target.value);
     });
     $('pane-drafts').addEventListener('input', (e) => {
       if (e.target.id !== 'draftSearch') return;
@@ -2781,7 +2855,6 @@
     applyLayout();
     persist(true);
     if (!prefs.toured) setTimeout(startTour, 500);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTopbar, () => {});
   }
 
   boot();

@@ -49,6 +49,7 @@
 
   --radius: 8px;
   --left-w: 300px;
+  --rail-w: 72px;
   --right-w: 400px;
   --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 8px 24px rgba(20, 30, 50, 0.06);
   color-scheme: light;
@@ -229,16 +230,85 @@ code, kbd {
 .icon-btn svg .fill { fill: currentColor; stroke: none; }
 
 .layout {
+  --lw: var(--left-w);
+  --rw: var(--right-w);
   display: grid;
-  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+  grid-template-columns: var(--rail-w) var(--lw) minmax(0, 1fr) var(--rw) var(--rail-w);
   min-height: 0;
   position: relative;
   overflow: hidden;
 }
-.layout.no-left { grid-template-columns: minmax(0, 1fr) var(--right-w); }
-.layout.no-right { grid-template-columns: var(--left-w) minmax(0, 1fr); }
-.layout.no-left.no-right { grid-template-columns: minmax(0, 1fr); }
+.layout > .rail-left { grid-column: 1; }
+.layout > .panel-left { grid-column: 2; }
+.layout > .desk { grid-column: 3; }
+.layout > .panel-right { grid-column: 4; }
+.layout > .rail-right { grid-column: 5; }
+.layout.no-left { --lw: 0px; }
+.layout.no-right { --rw: 0px; }
 .layout.no-left .panel-left, .layout.no-right .panel-right { display: none; }
+
+/* ---------- Icon rails: every panel one click away, nothing open by default ---------- */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 0;
+  background: var(--bg);
+  min-height: 0;
+}
+.rail-left { border-right: 1px solid var(--line); }
+.rail-right { border-left: 1px solid var(--line); }
+.rail-btn {
+  position: relative;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.rail-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.rail-btn svg .fill { fill: currentColor; stroke: none; }
+.rail-label { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.01em; line-height: 1.1; }
+.rail-btn:hover { color: var(--ink); background: var(--panel); }
+.rail-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rail-score {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  min-width: 20px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  background: var(--raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.rail-score:empty { display: none; }
+.rail-score.good { color: var(--good); border-color: currentColor; }
+.rail-score.ok { color: var(--warn); border-color: currentColor; }
+.rail-score.low { color: var(--bad); border-color: currentColor; }
+
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--line); flex: none; }
+.panel-title { margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
+.panel-close { border: 0; background: none; color: var(--faint); font-size: 1.25rem; line-height: 1; width: 28px; height: 28px; border-radius: var(--radius); cursor: pointer; }
+.panel-close:hover { color: var(--ink); background: var(--raised); }
+
+/* One genre menu in the top bar */
+.genre-pick { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; }
+.genre-pick-label { font-size: var(--text-sm); color: var(--faint); white-space: nowrap; }
 
 /* ---------- Panels ---------- */
 
@@ -797,8 +867,9 @@ code, kbd {
 
 /* ---------- Focus mode ---------- */
 
-.app.focus .panel { display: none; }
+.app.focus .panel, .app.focus .rail { display: none; }
 .app.focus .layout { grid-template-columns: minmax(0, 1fr); }
+.app.focus .layout > .desk { grid-column: 1; }
 .app.focus .sheet-foot { display: none; }
 
 /* ---------- Narrow screens: panels become drawers ---------- */
@@ -810,6 +881,9 @@ code, kbd {
 
 @media (max-width: 960px) {
   .layout, .layout.no-left, .layout.no-right { grid-template-columns: minmax(0, 1fr); }
+  .layout > .desk { grid-column: 1; }
+  .layout > .panel-left, .layout > .panel-right { grid-column: auto; }
+  .rail, .panel-head { display: none; }
   .panel {
     position: absolute;
     top: 0;
@@ -830,6 +904,7 @@ code, kbd {
 
 @media (max-width: 640px) {
   .topbar { gap: 10px; padding-inline: 16px; }
+  .genre-pick-label { display: none; }
   .desk { padding: 16px 16px 60px; }
   .sheet { padding: 20px 18px 18px; border-radius: 8px; }
   .doc-title { font-size: 1.5rem; }
@@ -1077,18 +1152,25 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 /* ---------- Compact top bar ---------- */
 
 .genre-select {
-  display: none;
+  display: block;
+  appearance: none;
+  -webkit-appearance: none;
   border: 1px solid var(--line);
-  background: var(--raised);
+  background-color: var(--raised);
+  color: var(--ink);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 6px 30px 6px 14px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 11px) 52%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 700;
   min-width: 0;
   max-width: 220px;
 }
-.topbar.compact .genre-tabs { visibility: hidden; flex: 0 0 0; width: 0; overflow: hidden; }
-.topbar.compact .genre-select { display: block; flex: 1 1 auto; margin-right: auto; }
+
 
 /* ---------- Learning path ---------- */
 
@@ -1247,7 +1329,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 }
 .tool-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
 /* The rules + framework group gives way first: the framework name truncates before the icons wrap. */
-.tool-group:first-child { flex: 1 1 0; flex-wrap: nowrap; min-width: min(100%, 230px); }
+.tool-group:first-child { flex: 1 1 0; flex-wrap: nowrap; min-width: min(100%, 160px); }
 .tool-group:first-child .tool-pill { min-width: 0; flex: 0 1 auto; }
 .tool-select {
   appearance: none;
@@ -1433,6 +1515,15 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   body.print-preview .preview { color: #000; font-size: 12pt; }
 }
 
+/* Desktop: the rails replace the panel tabs and the drawer buttons. Kept last so it wins over earlier .panel-tabs rules. */
+@media (min-width: 961px) {
+  .panel-tabs { display: none; }
+  .drawer-btn { display: none; }
+}
+
+/* Quieter green: rule-following marks recede so the issues stand out. */
+.backdrop .m-good { text-decoration-color: color-mix(in srgb, var(--good) 55%, transparent); }
+
 </style>
 </head>
 <body>
@@ -1442,14 +1533,16 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
       <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-4.6L15.8 4.8a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8 4 20z"/><path d="M14 6.6l3.4 3.4"/></svg>
       <span class="brand-name">Writing Playground</span>
     </div>
-    <nav class="genre-tabs" id="genreTabs" aria-label="What are you writing?"></nav>
-    <select class="genre-select" id="genreSelect" aria-label="What are you writing?"></select>
+    <label class="genre-pick" title="What are you writing? Each kind has its own rules, frameworks and drafts.">
+      <span class="genre-pick-label">Writing</span>
+      <select class="genre-select" id="genreSelect" aria-label="What are you writing?"></select>
+    </label>
     <div class="top-actions">
-      <button class="icon-btn" id="toggleLeft" type="button" aria-controls="leftPanel" aria-expanded="true" title="Ideas &amp; drafts">
+      <button class="icon-btn drawer-btn" id="toggleLeft" type="button" aria-controls="leftPanel" aria-expanded="true" title="Ideas &amp; drafts">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9 4.5v15"/></svg>
         <span class="btn-label">Ideas</span>
       </button>
-      <button class="icon-btn" id="toggleRight" type="button" aria-controls="rightPanel" aria-expanded="true" title="Toolkit">
+      <button class="icon-btn drawer-btn" id="toggleRight" type="button" aria-controls="rightPanel" aria-expanded="true" title="Toolkit">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M15 4.5v15"/></svg>
         <span class="btn-label">Toolkit</span>
       </button>
@@ -1465,7 +1558,22 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   </header>
 
   <div class="layout" id="layout">
+    <nav class="rail rail-left" aria-label="Ideas and drafts">
+      <button class="rail-btn" type="button" id="rail-ideas" data-rail="left:ideas" aria-pressed="false" title="Ideas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.9 10.6c.6.6.9 1.4.9 2.4h6c0-1 .3-1.8.9-2.4A6 6 0 0 0 12 3z"/></svg>
+        <span class="rail-label">Ideas</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-practice" data-rail="left:practice" aria-pressed="false" title="Practice">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" class="fill"/></svg>
+        <span class="rail-label">Practice</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-drafts" data-rail="left:drafts" aria-pressed="false" title="Drafts">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4M10 12h5M10 15.5h5"/></svg>
+        <span class="rail-label">Drafts</span>
+      </button>
+    </nav>
     <aside class="panel panel-left" id="leftPanel" aria-label="Ideas and drafts">
+      <div class="panel-head"><h2 class="panel-title" id="leftTitle">Ideas</h2><button class="panel-close" type="button" data-close="left" aria-label="Close this panel" title="Close">×</button></div>
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="ideas" id="tab-ideas" aria-selected="true">Ideas</button>
         <button role="tab" type="button" data-tab="practice" id="tab-practice" aria-selected="false">Practice</button>
@@ -1482,7 +1590,6 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
           <input id="docTitle" class="doc-title" type="text" placeholder="Untitled draft" aria-label="Draft title" autocomplete="off">
           <div class="sheet-tools" role="toolbar" aria-label="Page tools">
             <div class="tool-group">
-              <select class="tool-select" id="genreChip" aria-label="Check this draft as" title="Which genre's rules check this draft"></select>
               <button class="tool-pill" id="frameworkChip" type="button"></button>
             </div>
             <div class="tool-group tool-icons">
@@ -1511,6 +1618,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
     </main>
 
     <aside class="panel panel-right" id="rightPanel" aria-label="Writing toolkit">
+      <div class="panel-head"><h2 class="panel-title" id="rightTitle">Checks</h2><button class="panel-close" type="button" data-close="right" aria-label="Close this panel" title="Close">×</button></div>
       <div class="panel-tabs" role="tablist">
         <button role="tab" type="button" data-tab="checks" id="tab-checks" aria-selected="true">Checks <span class="tab-score" id="tabScore"></span></button>
         <button role="tab" type="button" data-tab="frameworks" id="tab-frameworks" aria-selected="false">Frameworks</button>
@@ -1522,6 +1630,24 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
       <div class="panel-body" id="pane-coach" role="tabpanel" aria-labelledby="tab-coach" hidden></div>
       <div class="panel-body" id="pane-learn" role="tabpanel" aria-labelledby="tab-learn" hidden></div>
     </aside>
+    <nav class="rail rail-right" aria-label="Writing toolkit">
+      <button class="rail-btn" type="button" id="rail-checks" data-rail="right:checks" aria-pressed="false" title="Checks">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.8-5"/></svg><span class="rail-score" id="railScore"></span>
+        <span class="rail-label">Checks</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-frameworks" data-rail="right:frameworks" aria-pressed="false" title="Frameworks">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 12h10M5 18.5h6"/></svg>
+        <span class="rail-label">Frameworks</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-coach" data-rail="right:coach" aria-pressed="false" title="Coach">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5h15v10H10l-4 3.5v-3.5H4.5z"/></svg>
+        <span class="rail-label">Coach</span>
+      </button>
+      <button class="rail-btn" type="button" id="rail-learn" data-rail="right:learn" aria-pressed="false" title="Learn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-1 5.5-1 8 .8 2.5-1.8 5-1.8 8-.8V19c-3-1-5.5-1-8 .8-2.5-1.8-5-1.8-8-.8z"/><path d="M12 6.3v13.5"/></svg>
+        <span class="rail-label">Learn</span>
+      </button>
+    </nav>
     <div class="scrim" id="scrim" hidden></div>
   </div>
 
@@ -7007,8 +7133,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   const prefs = Object.assign({
     leftTab: 'ideas',
     rightTab: 'checks',
-    showLeft: true,
-    showRight: true,
+    showLeft: false,
+    showRight: false,
     focus: false,
     wide: false,
     theme: null,
@@ -7026,6 +7152,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     warmups: {},
     levels: { good: true, warn: true, bad: true, info: true },
   }, load(STORE_PREFS, {}));
+  // Layout 2 starts with both side panels closed, behind the icon rails, for a calmer first screen.
+  if (prefs.layout !== 2) {
+    prefs.showLeft = false;
+    prefs.showRight = false;
+    prefs.layout = 2;
+  }
 
   const state = {
     docs: load(STORE_DOCS, []),
@@ -7190,6 +7322,18 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   });
 
   WP.editorInstance = editor;
+  // Opens a panel on a tab (never closes it). Used by tests and handy from the console.
+  WP.openTab = (tab) => {
+    const side = ['ideas', 'practice', 'drafts'].includes(tab) ? 'left' : 'right';
+    if (window.matchMedia('(max-width: 960px)').matches) {
+      $('layout').classList.remove('show-left', 'show-right');
+      $('layout').classList.add(side === 'left' ? 'show-left' : 'show-right');
+    } else if (side === 'left') prefs.showLeft = true;
+    else prefs.showRight = true;
+    prefs.focus = false;
+    setTab(side, tab);
+    applyLayout();
+  };
 
   function levelRank(l) {
     return { bad: 4, warn: 3, good: 2, info: 1 }[l] || 0;
@@ -7332,18 +7476,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function renderGenreTabs() {
     const g = genre();
-    $('genreTabs').innerHTML = WP.genres.map((x) => `
-      <button type="button" class="genre-tab" data-genre="${x.id}" aria-pressed="${x.id === g.id}" title="${esc(x.name)}: ${esc(x.tagline)}">${esc(SHORT_NAMES[x.id] || x.name)}</button>`).join('');
     $('genreSelect').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-    fitTopbar();
-  }
-
-  /** Swaps the genre tabs for a dropdown when they don't fit. */
-  function fitTopbar() {
-    const bar = document.querySelector('.topbar');
-    bar.classList.remove('compact');
-    const tabs = $('genreTabs');
-    if (tabs.scrollWidth > tabs.clientWidth + 2) bar.classList.add('compact');
   }
 
   /** Genre tabs open that genre's workspace: its latest draft, or an example on first visit. */
@@ -7400,6 +7533,37 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       $('toggleRight').setAttribute('aria-expanded', String(prefs.showRight && !prefs.focus));
     }
     $('sheet').classList.toggle('wide', prefs.wide);
+    renderRails();
+  }
+
+  const TAB_TITLES = { ideas: 'Ideas', practice: 'Practice', drafts: 'Drafts', checks: 'Checks', frameworks: 'Frameworks', coach: 'Coach', learn: 'Learn' };
+
+  /** The icon rails mirror which panel is open and on which tab. */
+  function renderRails() {
+    const leftOpen = prefs.showLeft && !prefs.focus;
+    const rightOpen = prefs.showRight && !prefs.focus;
+    document.querySelectorAll('.rail-btn').forEach((b) => {
+      const [side, tab] = b.dataset.rail.split(':');
+      const on = side === 'left' ? leftOpen && prefs.leftTab === tab : rightOpen && prefs.rightTab === tab;
+      b.setAttribute('aria-pressed', String(on));
+    });
+    $('leftTitle').textContent = TAB_TITLES[prefs.leftTab] || '';
+    $('rightTitle').textContent = TAB_TITLES[prefs.rightTab] || '';
+  }
+
+  /** Rail buttons open their panel on that tab, or close it if it is already showing. */
+  function railToggle(side, tab) {
+    const key = side === 'left' ? 'showLeft' : 'showRight';
+    const current = side === 'left' ? prefs.leftTab : prefs.rightTab;
+    if (prefs[key] && !prefs.focus && current === tab) prefs[key] = false;
+    else {
+      prefs[key] = true;
+      // On smaller laptops two open panels squeeze the page, so one at a time.
+      if (window.innerWidth < 1280) prefs[side === 'left' ? 'showRight' : 'showLeft'] = false;
+    }
+    prefs.focus = false;
+    setTab(side, tab);
+    applyLayout();
   }
 
   function togglePanel(side) {
@@ -7764,6 +7928,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   }
 
   function renderTabs() {
+    if ($('leftTitle')) renderRails();
     document.querySelectorAll('#leftPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.leftTab)));
     document.querySelectorAll('#rightPanel .panel-tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === prefs.rightTab)));
     $('pane-ideas').hidden = prefs.leftTab !== 'ideas';
@@ -8034,15 +8199,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   const TOUR = [
     { title: 'Welcome to your writing playground', body: 'A place to practice writing with guidance. Pick a kind of writing, use a proven structure, and get feedback as you type. This tour takes 30 seconds.' },
-    { target: '#genreTabs', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
-    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule.' },
+    { target: '.genre-pick', title: '1. Pick what you’re writing', body: 'Comedy, video scripts, stories, essays, poetry, copy, speeches and screenplays. Each one has its own rules, frameworks, lessons and drafts.' },
+    { target: '#leftPanel', side: 'left', title: '2. Never face a blank page', body: 'Ideas gives you prompts, a daily challenge and timed sprints. Practice has short drills that each teach one rule. Open them any time from the icons on the left edge.' },
     { target: '#sheet', title: '3. Write, and watch the highlights', body: 'Green means you’re following a rule, amber means take a look, red means it breaks a rule. Click a highlight to see why and fix it in one click. Listen reads your draft aloud.' },
-    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach (inside Claude) reviews your draft like an editor. Learn explains the basics.' },
+    { target: '#rightPanel', side: 'right', title: '4. Your toolkit', body: 'Checks shows your score and every rule. Frameworks gives you outlines to fill in. Coach reviews your draft. Learn explains the basics. They live behind the icons on the right edge; the number on Checks is your live score.' },
     { title: 'Start small', body: 'The best first step is a five-minute win. Try one drill, or take today’s challenge.', final: true },
   ];
   let tourStep = -1;
 
   function startTour() {
+    if (tourStep < 0) state.tourPanels = { left: prefs.showLeft, right: prefs.showRight, leftTab: prefs.leftTab, rightTab: prefs.rightTab };
     tourStep = 0;
     renderTour();
   }
@@ -8052,6 +8218,16 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     document.querySelectorAll('.tour-target').forEach((el) => el.classList.remove('tour-target'));
     $('tour').hidden = true;
     prefs.toured = true;
+    // Put the panels back the way they were, so the tour doesn't leave the screen busier than it found it.
+    if (state.tourPanels) {
+      prefs.showLeft = state.tourPanels.left;
+      prefs.showRight = state.tourPanels.right;
+      prefs.leftTab = state.tourPanels.leftTab;
+      prefs.rightTab = state.tourPanels.rightTab;
+      state.tourPanels = null;
+      renderTabs();
+      applyLayout();
+    }
     savePrefs();
   }
 
@@ -8061,9 +8237,15 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     if (!step) return endTour();
     const narrow = window.matchMedia('(max-width: 960px)').matches;
     if (step.side && !narrow) {
-      if (step.side === 'left') prefs.showLeft = true;
-      else prefs.showRight = true;
+      if (step.side === 'left') {
+        prefs.showLeft = true;
+        prefs.leftTab = 'ideas';
+      } else {
+        prefs.showRight = true;
+        prefs.rightTab = 'checks';
+      }
       prefs.focus = false;
+      renderTabs();
       applyLayout();
     }
     const target = step.target && document.querySelector(step.target);
@@ -8442,6 +8624,9 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       ${renderHistory(doc())}
       <section class="section">
         <p class="eyebrow">This draft</p>
+        <label class="field" for="checkAsSelect">Check it as
+          <select id="checkAsSelect" title="Which genre’s rules check this draft">${WP.genres.map((x) => `<option value="${x.id}" ${x.id === genre().id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        </label>
         <div class="btn-row">
           <button class="btn" type="button" data-act="copy">Copy text</button>
           <button class="btn" type="button" data-act="duplicate">Make a copy</button>
@@ -8613,6 +8798,9 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     results.forEach((r) => r.marks.forEach((m) => markCounts[m.level]++));
     const g = genre();
     $('tabScore').textContent = state.score == null ? '' : state.score;
+    $('railScore').textContent = state.score == null ? '' : state.score;
+    $('railScore').className = 'rail-score' + (state.score == null ? '' : state.score >= 75 ? ' good' : state.score >= 50 ? ' ok' : ' low');
+    $('rail-checks').title = state.score == null ? 'Checks' : `Checks: score ${state.score}, ${needsCount(results)} to fix`;
 
     // Issues first; what's already fine, tips and not-yet-active checks fold away below.
     const needs = results.filter((r) => r.status === 'fail' || r.status === 'warn').sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
@@ -8680,6 +8868,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       if (el) el.remove();
     }, 2400 - (Date.now() - dl.at));
     return `<span class="score-delta ${dl.v > 0 ? 'up' : 'down'}" aria-hidden="true">${dl.v > 0 ? '+' : '−'}${Math.abs(dl.v)}</span>`;
+  }
+
+  function needsCount(results) {
+    return results.filter((r) => r.status === 'fail' || r.status === 'warn').length;
   }
 
   function renderMuted() {
@@ -8884,7 +9076,6 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(SHORT_NAMES[x.id] || x.name)} rules</option>`).join('');
     const icon = '<svg class="tool-pill-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14M5 12h10M5 18.5h6"/></svg>';
     $('frameworkChip').innerHTML = fw ? `${icon}<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : `${icon}Choose a framework`;
     $('frameworkChip').title = fw ? `Framework: ${fw.name}. Open the Frameworks tab` : 'Open the Frameworks tab';
@@ -9228,10 +9419,20 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   /* ---------- events ---------- */
 
   function bind() {
-    $('genreTabs').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-genre]');
-      if (b) setGenre(b.dataset.genre);
-    });
+    document.querySelectorAll('.rail').forEach((rail) => rail.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rail]');
+      if (!b) return;
+      const [side, tab] = b.dataset.rail.split(':');
+      railToggle(side, tab);
+    }));
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.close === 'left') prefs.showLeft = false;
+      else prefs.showRight = false;
+      savePrefs();
+      applyLayout();
+      const rail = $('rail-' + (b.dataset.close === 'left' ? prefs.leftTab : prefs.rightTab));
+      if (rail) rail.focus();
+    }));
     $('toggleLeft').addEventListener('click', () => togglePanel('left'));
     $('toggleRight').addEventListener('click', () => togglePanel('right'));
     $('focusBtn').addEventListener('click', () => {
@@ -9264,7 +9465,6 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     });
     window.addEventListener('resize', () => {
       applyLayout();
-      fitTopbar();
       editor.render();
     });
 
@@ -9274,7 +9474,6 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       setTab(tabs.closest('.panel').id === 'leftPanel' ? 'left' : 'right', b.dataset.tab);
     }));
 
-    $('genreChip').addEventListener('change', (e) => checkAs(e.target.value));
     $('listenBtn').hidden = !canSpeak;
     $('listenBtn').addEventListener('click', toggleListen);
     $('editor').addEventListener('click', showFixCard);
@@ -9338,6 +9537,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     $('pane-drafts').addEventListener('change', (e) => {
       if (e.target.id === 'importFile') importFile(e.target.files && e.target.files[0]);
       if (e.target.id === 'restoreFile') restoreBackup(e.target.files && e.target.files[0]);
+      if (e.target.id === 'checkAsSelect') checkAs(e.target.value);
     });
     $('pane-drafts').addEventListener('input', (e) => {
       if (e.target.id !== 'draftSearch') return;
@@ -9744,7 +9944,6 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     applyLayout();
     persist(true);
     if (!prefs.toured) setTimeout(startTour, 500);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTopbar, () => {});
   }
 
   boot();

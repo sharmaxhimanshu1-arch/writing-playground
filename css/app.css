@@ -41,6 +41,7 @@
 
   --radius: 8px;
   --left-w: 300px;
+  --rail-w: 72px;
   --right-w: 400px;
   --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 8px 24px rgba(20, 30, 50, 0.06);
   color-scheme: light;
@@ -221,16 +222,85 @@ code, kbd {
 .icon-btn svg .fill { fill: currentColor; stroke: none; }
 
 .layout {
+  --lw: var(--left-w);
+  --rw: var(--right-w);
   display: grid;
-  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+  grid-template-columns: var(--rail-w) var(--lw) minmax(0, 1fr) var(--rw) var(--rail-w);
   min-height: 0;
   position: relative;
   overflow: hidden;
 }
-.layout.no-left { grid-template-columns: minmax(0, 1fr) var(--right-w); }
-.layout.no-right { grid-template-columns: var(--left-w) minmax(0, 1fr); }
-.layout.no-left.no-right { grid-template-columns: minmax(0, 1fr); }
+.layout > .rail-left { grid-column: 1; }
+.layout > .panel-left { grid-column: 2; }
+.layout > .desk { grid-column: 3; }
+.layout > .panel-right { grid-column: 4; }
+.layout > .rail-right { grid-column: 5; }
+.layout.no-left { --lw: 0px; }
+.layout.no-right { --rw: 0px; }
 .layout.no-left .panel-left, .layout.no-right .panel-right { display: none; }
+
+/* ---------- Icon rails: every panel one click away, nothing open by default ---------- */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 0;
+  background: var(--bg);
+  min-height: 0;
+}
+.rail-left { border-right: 1px solid var(--line); }
+.rail-right { border-left: 1px solid var(--line); }
+.rail-btn {
+  position: relative;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px 6px;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.rail-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.rail-btn svg .fill { fill: currentColor; stroke: none; }
+.rail-label { font-size: 0.625rem; font-weight: 700; letter-spacing: 0.01em; line-height: 1.1; }
+.rail-btn:hover { color: var(--ink); background: var(--panel); }
+.rail-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rail-score {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  min-width: 20px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  background: var(--raised);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.rail-score:empty { display: none; }
+.rail-score.good { color: var(--good); border-color: currentColor; }
+.rail-score.ok { color: var(--warn); border-color: currentColor; }
+.rail-score.low { color: var(--bad); border-color: currentColor; }
+
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 12px 10px 16px; border-bottom: 1px solid var(--line); flex: none; }
+.panel-title { margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--ink); }
+.panel-close { border: 0; background: none; color: var(--faint); font-size: 1.25rem; line-height: 1; width: 28px; height: 28px; border-radius: var(--radius); cursor: pointer; }
+.panel-close:hover { color: var(--ink); background: var(--raised); }
+
+/* One genre menu in the top bar */
+.genre-pick { display: flex; align-items: center; gap: 8px; min-width: 0; margin-right: auto; }
+.genre-pick-label { font-size: var(--text-sm); color: var(--faint); white-space: nowrap; }
 
 /* ---------- Panels ---------- */
 
@@ -789,8 +859,9 @@ code, kbd {
 
 /* ---------- Focus mode ---------- */
 
-.app.focus .panel { display: none; }
+.app.focus .panel, .app.focus .rail { display: none; }
 .app.focus .layout { grid-template-columns: minmax(0, 1fr); }
+.app.focus .layout > .desk { grid-column: 1; }
 .app.focus .sheet-foot { display: none; }
 
 /* ---------- Narrow screens: panels become drawers ---------- */
@@ -802,6 +873,9 @@ code, kbd {
 
 @media (max-width: 960px) {
   .layout, .layout.no-left, .layout.no-right { grid-template-columns: minmax(0, 1fr); }
+  .layout > .desk { grid-column: 1; }
+  .layout > .panel-left, .layout > .panel-right { grid-column: auto; }
+  .rail, .panel-head { display: none; }
   .panel {
     position: absolute;
     top: 0;
@@ -822,6 +896,7 @@ code, kbd {
 
 @media (max-width: 640px) {
   .topbar { gap: 10px; padding-inline: 16px; }
+  .genre-pick-label { display: none; }
   .desk { padding: 16px 16px 60px; }
   .sheet { padding: 20px 18px 18px; border-radius: 8px; }
   .doc-title { font-size: 1.5rem; }
@@ -1069,18 +1144,25 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 /* ---------- Compact top bar ---------- */
 
 .genre-select {
-  display: none;
+  display: block;
+  appearance: none;
+  -webkit-appearance: none;
   border: 1px solid var(--line);
-  background: var(--raised);
+  background-color: var(--raised);
+  color: var(--ink);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 6px 30px 6px 14px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 11px) 52%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
   font-size: var(--text-sm);
   font-weight: 700;
   min-width: 0;
   max-width: 220px;
 }
-.topbar.compact .genre-tabs { visibility: hidden; flex: 0 0 0; width: 0; overflow: hidden; }
-.topbar.compact .genre-select { display: block; flex: 1 1 auto; margin-right: auto; }
+
 
 /* ---------- Learning path ---------- */
 
@@ -1239,7 +1321,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 }
 .tool-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
 /* The rules + framework group gives way first: the framework name truncates before the icons wrap. */
-.tool-group:first-child { flex: 1 1 0; flex-wrap: nowrap; min-width: min(100%, 230px); }
+.tool-group:first-child { flex: 1 1 0; flex-wrap: nowrap; min-width: min(100%, 160px); }
 .tool-group:first-child .tool-pill { min-width: 0; flex: 0 1 auto; }
 .tool-select {
   appearance: none;
@@ -1424,3 +1506,12 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   body.print-preview .modal-body { overflow: visible; padding: 0; }
   body.print-preview .preview { color: #000; font-size: 12pt; }
 }
+
+/* Desktop: the rails replace the panel tabs and the drawer buttons. Kept last so it wins over earlier .panel-tabs rules. */
+@media (min-width: 961px) {
+  .panel-tabs { display: none; }
+  .drawer-btn { display: none; }
+}
+
+/* Quieter green: rule-following marks recede so the issues stand out. */
+.backdrop .m-good { text-decoration-color: color-mix(in srgb, var(--good) 55%, transparent); }
