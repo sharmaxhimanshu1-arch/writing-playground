@@ -288,12 +288,17 @@
 
   /* ---------- what improved ---------- */
 
+  /** Highlights this draft's writer marked as intentional. Drills and warm-ups test the rule itself, so none there. */
+  function ignoredIn(d) {
+    return d && !d.drill && !d.game ? d.ignored || [] : [];
+  }
+
   function resultsFor(d, text) {
     const g = genreById(d.genre);
     const ctx = T.parse(text, { framework: d.framework, genre: g.id });
     ctx.frameworkDef = g.frameworks.find((f) => f.id === d.framework) || null;
     const muted = new Set(prefs.muted[g.id] || []);
-    return WP.checks.run(g.checks.filter((c) => !muted.has(c.id)), ctx);
+    return WP.checks.run(g.checks.filter((c) => !muted.has(c.id)), ctx, { ignore: ignoredIn(d) });
   }
 
   /* ---------- preview ---------- */
@@ -383,7 +388,7 @@
     $, esc, T, STORE_DOCS, STORE_PREFS, LEVELS, STATUS_LABEL, STATUS_ORDER, load, save, uid, pick,
     prefs, state, genreById, doc, genre, frameworkDef, newDoc, sampleDoc, isUntouchedSample,
     STORAGE_SOFT_LIMIT, STORAGE_TOTAL, storageUsed, pruneVersions, persist, savePrefs, editor,
-    levelRank, dayKey, trackWords, streak, realDrafts, resultsFor, cleanText, sectionsOf, hash,
+    levelRank, dayKey, trackWords, streak, realDrafts, ignoredIn, resultsFor, cleanText, sectionsOf, hash,
     openModal, closeModal, insertNote, wordCount, fmtClock, relTime, toast
   });
 })(window.WP = window.WP || {});

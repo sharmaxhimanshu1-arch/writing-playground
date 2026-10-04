@@ -331,9 +331,19 @@
   });
 
   /** Runs a genre's checks and computes an overall score. */
+  /** How a dismissed highlight is remembered: the check plus the exact words, so it survives edits elsewhere. */
+  const ignoreKey = (checkId, text) => checkId + '|' + String(text).toLowerCase().replace(/\s+/g, ' ').trim();
+
+  /**
+   * Runs checks against a parsed draft.
+   * opts.force: check ids that run below their usual word minimum (drills, warm-ups).
+   * opts.ignore: [{ check, text }] highlights the writer marked as intentional; they are dropped, and a
+   * check whose every flagged spot was dismissed counts as followed.
+   */
   function run(checks, ctx, opts = {}) {
     const results = [];
     const force = new Set(opts.force || []);
+    const ignore = new Set((opts.ignore || []).map((x) => ignoreKey(x.check, x.text)));
     for (const c of checks) {
       const base = { id: c.id, title: c.title, group: c.group || 'Style', why: c.why };
       const min = force.has(c.id) ? Math.min(1, c.minWords ?? 20) : c.minWords ?? 20;
@@ -354,6 +364,21 @@
         m.checkId = c.id;
         m.checkTitle = c.title;
       });
+      if (ignore.size) {
+        const isIssue = (m) => m.level === 'warn' || m.level === 'bad';
+        const before = r.marks.filter(isIssue).length;
+        const kept = r.marks.filter((m) => !(isIssue(m) && ignore.has(ignoreKey(c.id, ctx.text.slice(m.start, m.end)))));
+        const dropped = r.marks.length - kept.length;
+        if (dropped) {
+          r.marks = kept;
+          r.ignored = dropped;
+          const left = kept.filter(isIssue).length;
+          if (before && !left && (r.status === 'warn' || r.status === 'fail')) {
+            r.status = 'pass';
+            r.summary = `Every flagged spot is marked as intentional (${dropped}).`;
+          } else r.summary = `${r.summary} ${dropped} marked as intentional.`;
+        }
+      }
       results.push(Object.assign(base, r));
     }
     const weights = { pass: 1, warn: 0.5, fail: 0 };
@@ -362,6 +387,6 @@
     return { results, score };
   }
 
-  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus, DELETE };
+  WP.checks = { C, run, ignoreKey, mark, plural, per100, band, quote, beatStatus, DELETE };
   WP.genres = WP.genres || [];
 })(window.WP = window.WP || {});

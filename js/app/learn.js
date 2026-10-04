@@ -24,7 +24,7 @@
         if (w.lower.length < 4 || WP.lex.stopwords.has(w.lower) || /^\d/.test(w.lower)) continue;
         words.set(w.lower, (words.get(w.lower) || 0) + 1);
       }
-      for (const r of WP.checks.run(g.checks, ctx).results) {
+      for (const r of WP.checks.run(g.checks, ctx, { ignore: A.ignoredIn(d) }).results) {
         if (r.id === 'structure' || !(r.status === 'fail' || r.status === 'warn')) continue;
         const t = tally.get(r.id) || { id: r.id, title: r.title, why: r.why, drafts: 0, genres: new Set() };
         t.drafts++;

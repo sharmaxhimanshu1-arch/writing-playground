@@ -2525,9 +2525,19 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
   });
 
   /** Runs a genre's checks and computes an overall score. */
+  /** How a dismissed highlight is remembered: the check plus the exact words, so it survives edits elsewhere. */
+  const ignoreKey = (checkId, text) => checkId + '|' + String(text).toLowerCase().replace(/\s+/g, ' ').trim();
+
+  /**
+   * Runs checks against a parsed draft.
+   * opts.force: check ids that run below their usual word minimum (drills, warm-ups).
+   * opts.ignore: [{ check, text }] highlights the writer marked as intentional; they are dropped, and a
+   * check whose every flagged spot was dismissed counts as followed.
+   */
   function run(checks, ctx, opts = {}) {
     const results = [];
     const force = new Set(opts.force || []);
+    const ignore = new Set((opts.ignore || []).map((x) => ignoreKey(x.check, x.text)));
     for (const c of checks) {
       const base = { id: c.id, title: c.title, group: c.group || 'Style', why: c.why };
       const min = force.has(c.id) ? Math.min(1, c.minWords ?? 20) : c.minWords ?? 20;
@@ -2548,6 +2558,21 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
         m.checkId = c.id;
         m.checkTitle = c.title;
       });
+      if (ignore.size) {
+        const isIssue = (m) => m.level === 'warn' || m.level === 'bad';
+        const before = r.marks.filter(isIssue).length;
+        const kept = r.marks.filter((m) => !(isIssue(m) && ignore.has(ignoreKey(c.id, ctx.text.slice(m.start, m.end)))));
+        const dropped = r.marks.length - kept.length;
+        if (dropped) {
+          r.marks = kept;
+          r.ignored = dropped;
+          const left = kept.filter(isIssue).length;
+          if (before && !left && (r.status === 'warn' || r.status === 'fail')) {
+            r.status = 'pass';
+            r.summary = `Every flagged spot is marked as intentional (${dropped}).`;
+          } else r.summary = `${r.summary} ${dropped} marked as intentional.`;
+        }
+      }
       results.push(Object.assign(base, r));
     }
     const weights = { pass: 1, warn: 0.5, fail: 0 };
@@ -2556,7 +2581,7 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
     return { results, score };
   }
 
-  WP.checks = { C, run, mark, plural, per100, band, quote, beatStatus, DELETE };
+  WP.checks = { C, run, ignoreKey, mark, plural, per100, band, quote, beatStatus, DELETE };
   WP.genres = WP.genres || [];
 })(window.WP = window.WP || {});
 
@@ -7426,12 +7451,17 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   /* ---------- what improved ---------- */
 
+  /** Highlights this draft's writer marked as intentional. Drills and warm-ups test the rule itself, so none there. */
+  function ignoredIn(d) {
+    return d && !d.drill && !d.game ? d.ignored || [] : [];
+  }
+
   function resultsFor(d, text) {
     const g = genreById(d.genre);
     const ctx = T.parse(text, { framework: d.framework, genre: g.id });
     ctx.frameworkDef = g.frameworks.find((f) => f.id === d.framework) || null;
     const muted = new Set(prefs.muted[g.id] || []);
-    return WP.checks.run(g.checks.filter((c) => !muted.has(c.id)), ctx);
+    return WP.checks.run(g.checks.filter((c) => !muted.has(c.id)), ctx, { ignore: ignoredIn(d) });
   }
 
   /* ---------- preview ---------- */
@@ -7521,7 +7551,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     $, esc, T, STORE_DOCS, STORE_PREFS, LEVELS, STATUS_LABEL, STATUS_ORDER, load, save, uid, pick,
     prefs, state, genreById, doc, genre, frameworkDef, newDoc, sampleDoc, isUntouchedSample,
     STORAGE_SOFT_LIMIT, STORAGE_TOTAL, storageUsed, pruneVersions, persist, savePrefs, editor,
-    levelRank, dayKey, trackWords, streak, realDrafts, resultsFor, cleanText, sectionsOf, hash,
+    levelRank, dayKey, trackWords, streak, realDrafts, ignoredIn, resultsFor, cleanText, sectionsOf, hash,
     openModal, closeModal, insertNote, wordCount, fmtClock, relTime, toast
   });
 })(window.WP = window.WP || {});
@@ -7866,7 +7896,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const muted = new Set(prefs.muted[g.id] || []);
     const checks = game ? gameChecks : g.checks.filter((c) => !muted.has(c.id));
     const force = (d.drill ? [d.drill.rule] : []).concat(gameChecks.map((c) => c.id));
-    const { results, score } = WP.checks.run(checks, ctx, { force });
+    const { results, score } = WP.checks.run(checks, ctx, { force, ignore: A.ignoredIn(d) });
     // Show how an edit moved the score, but not when opening a draft or switching genre.
     const same = state.scoreKey === d.id + ':' + g.id + ':' + (d.framework || '');
     state.scoreDelta = same && state.score != null && score != null && score !== state.score ? { v: score - state.score, at: Date.now() } : state.scoreDelta;
@@ -8022,6 +8052,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
           </details>
         </section>` : ''}
       ${(() => { const r = empty ? '' : renderRhythm(state.ctx); return r ? `<section class="section">${r}</section>` : ''; })()}
+      ${renderIgnored()}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -8039,6 +8070,19 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function needsCount(results) {
     return results.filter((r) => r.status === 'fail' || r.status === 'warn').length;
+  }
+
+  /** Highlights dismissed as intentional in this draft, each with a way back. */
+  function renderIgnored() {
+    const d = doc();
+    const list = A.ignoredIn(d);
+    if (!list.length) return '';
+    return `<section class="section">
+        <details class="fold" data-fold="ignored">
+          <summary><span class="badge badge-na">Intentional</span> ${list.length} ${list.length === 1 ? 'highlight' : 'highlights'} you kept on purpose</summary>
+          <ul class="muted-list">${list.map((x, i) => `<li><span><b>${esc(x.title || x.check)}</b> <span class="small muted">“${esc(x.text.length > 50 ? x.text.slice(0, 48) + '…' : x.text)}”</span></span><button class="btn btn-small" type="button" data-unignore="${i}">Check it again</button></li>`).join('')}</ul>
+        </details>
+      </section>`;
   }
 
   function renderMuted() {
@@ -8089,7 +8133,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
               <span class="hit-text">${esc(snippet(text, m))}</span>
               <span class="hit-note">${esc(A.noteText(m))}</span>
             </button>
-            ${m.fixes ? `<span class="hit-fixes">${m.fixes.map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}</span>` : ''}
+            ${m.fixes || A.canIgnore(m) ? `<span class="hit-fixes">${(m.fixes || []).map((f, i) => `<button type="button" class="btn btn-small" data-fix="${m.idx}:${i}">${esc(f.label)}</button>`).join('')}${A.canIgnore(m) ? `<button type="button" class="btn btn-quiet btn-small" data-ignore="${m.idx}" title="Stop flagging these words for this rule, in this draft only">Intentional</button>` : ''}</span>` : ''}
           </li>`).join('')}</ul>
           ${list.length > 14 ? `<p class="small muted">+ ${list.length - 14} more highlighted in the draft.</p>` : ''}` : ''}
       </div>` : ''}
@@ -8120,7 +8164,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   'use strict';
 
   const A = WP.app;
-  const { $, editor, esc, levelRank, prefs, state, toast } = A;
+  const { $, doc, editor, esc, levelRank, persist, prefs, state, toast } = A;
 
   /* ---------- fixes ---------- */
 
@@ -8188,6 +8232,45 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     openFixCard(m);
   }
 
+  function canIgnore(m) {
+    const d = doc();
+    return (m.level === 'warn' || m.level === 'bad') && !d.drill && !d.game;
+  }
+
+  /** Marks a highlight's words as intentional for its rule in this draft; the check reruns without them. */
+  function ignoreMark(m) {
+    const d = doc();
+    const text = d.text.slice(m.start, m.end).replace(/\s+/g, ' ').trim();
+    if (!text || !canIgnore(m)) return;
+    const key = WP.checks.ignoreKey(m.checkId, text);
+    d.ignored = (d.ignored || []).filter((x) => WP.checks.ignoreKey(x.check, x.text) !== key);
+    d.ignored.push({ check: m.checkId, title: m.checkTitle, text });
+    d.updated = Date.now();
+    persist(true);
+    const next = state.fixMark === m ? visibleIssues().find((x) => x.start > m.start && x !== m) : null;
+    hideFixCard();
+    A.analyze();
+    const short = text.length > 40 ? text.slice(0, 38) + '…' : text;
+    toast(`“${short}” won’t be flagged for ${m.checkTitle} in this draft. Undo it at the bottom of Checks.`);
+    if (next) {
+      const again = visibleIssues().find((x) => x.start >= next.start);
+      if (again) {
+        editor.reveal(again.start, again.end);
+        openFixCard(again);
+      }
+    }
+  }
+
+  function unignore(i) {
+    const d = doc();
+    if (!d.ignored || !d.ignored[i]) return;
+    const x = d.ignored.splice(i, 1)[0];
+    d.updated = Date.now();
+    persist(true);
+    A.analyze();
+    toast(`“${x.text}” is checked for ${x.title} again.`);
+  }
+
   /** Issues the reader can currently see, in document order. */
   function visibleIssues() {
     return state.allMarks
@@ -8207,6 +8290,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         ${(m.fixes || []).map((f, i) => `<button class="btn btn-primary" type="button" data-card-fix="${i}">${esc(f.label)}</button>`).join('')}
         ${WP.coach.isReady() ? '<button class="btn" type="button" data-card-coach>Ask the coach</button>' : ''}
         ${others ? '<button class="btn" type="button" data-card-next title="Next issue (Ctrl/⌘ + .)">Next issue ›</button>' : ''}
+        ${canIgnore(m) ? '<button class="btn btn-quiet" type="button" data-card-ignore title="Stop flagging these words for this rule, in this draft only">It’s intentional</button>' : ''}
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
@@ -8264,7 +8348,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   Object.assign(A, {
     fixEdit, applyFix, applyAll, showFixCard, visibleIssues, openFixCard, nextIssueCard, noteText,
-    placeFixCard, hideFixCard
+    placeFixCard, hideFixCard, canIgnore, ignoreMark, unignore
   });
 })(window.WP = window.WP || {});
 
@@ -8847,7 +8931,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     if (last && last.text === d.text) return false;
     const ctx = T.parse(d.text, { framework: d.framework, genre: d.genre });
     ctx.frameworkDef = genreById(d.genre).frameworks.find((f) => f.id === d.framework) || null;
-    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx).score;
+    const score = d.id === state.currentId ? state.score : WP.checks.run(genreById(d.genre).checks, ctx, { ignore: A.ignoredIn(d) }).score;
     d.versions.push({ at: Date.now(), text: d.text, words: ctx.wordCount, score, label: label || '' });
     if (d.versions.length > MAX_VERSIONS) d.versions.splice(0, d.versions.length - MAX_VERSIONS);
     persist();
@@ -9501,7 +9585,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         if (w.lower.length < 4 || WP.lex.stopwords.has(w.lower) || /^\d/.test(w.lower)) continue;
         words.set(w.lower, (words.get(w.lower) || 0) + 1);
       }
-      for (const r of WP.checks.run(g.checks, ctx).results) {
+      for (const r of WP.checks.run(g.checks, ctx, { ignore: A.ignoredIn(d) }).results) {
         if (r.id === 'structure' || !(r.status === 'fail' || r.status === 'warn')) continue;
         const t = tally.get(r.id) || { id: r.id, title: r.title, why: r.why, drafts: 0, genres: new Set() };
         t.drafts++;
@@ -9921,6 +10005,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       const b = e.target.closest('button');
       if (!b) return;
       if (b.hasAttribute('data-card-close')) return A.hideFixCard();
+      if (b.hasAttribute('data-card-ignore') && state.fixMark) return A.ignoreMark(state.fixMark);
       if (b.hasAttribute('data-card-next')) return A.nextIssueCard();
       if (b.hasAttribute('data-card-coach') && state.fixMark) return askCoachAbout(state.fixMark);
       if (b.dataset.cardFix && state.fixMark) A.applyFix(state.fixMark, state.fixMark.fixes[Number(b.dataset.cardFix)]);
@@ -10267,6 +10352,14 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         if (r) A.applyAll(r.marks.filter((m) => m.fixes && m.fixes.length));
         return;
       }
+      const ig = e.target.closest('[data-ignore]');
+      if (ig) {
+        const m = state.allMarks[Number(ig.dataset.ignore)];
+        if (m) A.ignoreMark(m);
+        return;
+      }
+      const ug = e.target.closest('[data-unignore]');
+      if (ug) return A.unignore(Number(ug.dataset.unignore));
       const hit = e.target.closest('[data-hit]');
       if (hit) {
         const [s, en] = hit.dataset.hit.split(':').map(Number);
