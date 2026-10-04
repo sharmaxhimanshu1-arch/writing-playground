@@ -197,6 +197,7 @@
       hideFixCard();
       scheduleAnalysis();
       renderStatusLight();
+      if (!$('starter').hidden || !text.trim()) renderStarter();
     },
     onCaret(pos) {
       const here = editor.marksAt(pos);
@@ -316,7 +317,7 @@
     }
     const max = Math.max(50, ...days.map((x) => x.words));
     const W = 280;
-    const H = 56;
+    const H = 40;
     const gap = 3;
     const bw = (W - gap * 13) / 14;
     const fmt = (d) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -332,6 +333,10 @@
     const today = prefs.days[dayKey()] || 0;
     const st = streak();
     const total = days.reduce((a, x) => a + x.words, 0);
+    if (!total) {
+      el.innerHTML = `<p class="small muted">Nothing written yet in the last 14 days. Your daily words and streak will show up here.</p>`;
+      return;
+    }
     el.innerHTML = `
       <div class="progress-stats">
         <span><b>${today}</b> words today</span>
@@ -1614,13 +1619,12 @@
     const g = genre();
     $('tabScore').textContent = state.score == null ? '' : state.score;
 
-    const groups = [];
-    for (const r of results) {
-      let grp = groups.find((x) => x.name === r.group);
-      if (!grp) groups.push((grp = { name: r.group, items: [] }));
-      grp.items.push(r);
-    }
-    groups.forEach((grp) => grp.items.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]));
+    // Issues first; what's already fine, tips and not-yet-active checks fold away below.
+    const needs = results.filter((r) => r.status === 'fail' || r.status === 'warn').sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+    const tips = results.filter((r) => r.status === 'info');
+    const passing = results.filter((r) => r.status === 'pass');
+    const waiting = results.filter((r) => r.status === 'na');
+    const openIf = (list) => list.some((r) => state.expanded.has(r.id) || state.spotlight === r.id);
 
     const empty = !state.ctx || state.ctx.wordCount === 0;
     const spot = state.spotlight && results.find((r) => r.id === state.spotlight);
@@ -1628,8 +1632,8 @@
     pane.innerHTML = `
       <section class="section">
         <div class="score-head">
-          <div class="score-num" aria-label="Draft score">${state.score == null ? '–' : state.score}<small>/100</small></div>
-          <div>
+          <div class="score-num" aria-label="Draft score">${state.score == null ? '<span class="score-none">No score yet</span>' : `${state.score}<small>/100</small>`}</div>
+          <div ${state.score == null ? 'hidden' : ''}>
             <div class="meter" aria-hidden="true">
               ${scored ? `<span class="m-pass" style="width:${(counts.pass / scored) * 100}%"></span><span class="m-warn" style="width:${(counts.warn / scored) * 100}%"></span><span class="m-fail" style="width:${(counts.fail / scored) * 100}%"></span>` : ''}
             </div>
@@ -1647,11 +1651,26 @@
         ${prefs.oneThing ? (spot ? `<div class="spotlight-bar"><span>Fix this first: ${esc(spot.title)} <span class="small">(${issuesInOrder(results).findIndex((r) => r.id === spot.id) + 1} of ${issuesInOrder(results).length})</span></span><button class="btn btn-quiet" type="button" data-act="next-thing">Next issue</button></div>` : '<div class="spotlight-bar"><span>Nothing to fix right now. Nice work.</span></div>')
           : spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
       </section>
-      ${groups.map((grp) => `
-        <section class="section check-group">
-          <p class="eyebrow">${esc(grp.name)}</p>
-          ${grp.items.map(renderCheck).join('')}
-        </section>`).join('')}
+      ${needs.length ? `<section class="section check-group">
+          <p class="eyebrow">Needs work · ${needs.length}</p>
+          ${needs.map(renderCheck).join('')}
+        </section>` : empty ? '' : `<section class="section"><p class="all-good">Nothing to fix. Every active rule is being followed.</p></section>`}
+      ${tips.length ? `<section class="section check-group">
+          <p class="eyebrow">Tips · ${tips.length}</p>
+          ${tips.map(renderCheck).join('')}
+        </section>` : ''}
+      ${passing.length ? `<section class="section check-group">
+          <details class="fold" ${openIf(passing) || prefs.showPassing ? 'open' : ''} data-fold="passing">
+            <summary><span class="badge badge-pass">Following</span> ${passing.length} ${passing.length === 1 ? 'rule' : 'rules'} you’re already following</summary>
+            <div class="check-group">${passing.map(renderCheck).join('')}</div>
+          </details>
+        </section>` : ''}
+      ${waiting.length ? `<section class="section">
+          <details class="fold" data-fold="waiting">
+            <summary><span class="badge badge-na">Waiting</span> ${waiting.length} more ${waiting.length === 1 ? 'check starts' : 'checks start'} as you write</summary>
+            <ul class="waiting-list">${waiting.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ul>
+          </details>
+        </section>` : ''}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -1859,8 +1878,8 @@
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>Checked as ${esc(x.name)}</option>`).join('');
-    $('frameworkChip').textContent = fw ? `Framework: ${fw.name}` : 'Choose a framework';
+    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)} rules</option>`).join('');
+    $('frameworkChip').innerHTML = fw ? `<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : 'Choose a framework';
     $('frameworkChip').title = 'Open the Frameworks tab';
   }
 
@@ -2009,7 +2028,8 @@
   function setSpeaking(on) {
     state.speaking = on;
     const b = $('listenBtn');
-    b.textContent = on ? 'Stop listening' : 'Listen';
+    b.querySelector('.tool-label').textContent = on ? 'Stop' : 'Listen';
+    b.title = on ? 'Stop reading aloud' : 'Read aloud (Ctrl/⌘+Shift+L)';
     b.setAttribute('aria-pressed', String(on));
   }
 
@@ -2104,7 +2124,52 @@
 
   /* ---------- render all ---------- */
 
+  /* ---------- blank-page starter ---------- */
+
+  function renderStarter() {
+    const d = doc();
+    const box = $('starter');
+    const show = !d.text.trim() && !d.game;
+    box.hidden = !show;
+    if (!show) return;
+    const fw = frameworkDef();
+    box.innerHTML = `
+      <p class="starter-title">How do you want to start?</p>
+      <div class="starter-grid">
+        <button type="button" data-start="prompt"><b>Give me a prompt</b><span>A ready-made idea to write about</span></button>
+        <button type="button" data-start="plan"><b>Plan it first</b><span>${planFor(genre()).length} quick questions about your piece</span></button>
+        <button type="button" data-start="outline"><b>Use an outline</b><span>${fw ? esc(fw.name) + ': fill in each beat' : 'A proven structure to fill in'}</span></button>
+        <button type="button" data-start="warmup"><b>Warm up first</b><span>A 3-minute writing game</span></button>
+      </div>
+      <button type="button" class="starter-skip" data-start="type">Or just start typing</button>`;
+  }
+
+  function runStarter(kind) {
+    if (kind === 'prompt') {
+      if (!state.prompt) state.prompt = pick(genre().prompts);
+      useStarter('Prompt: ' + state.prompt);
+    } else if (kind === 'plan') {
+      if (window.matchMedia('(max-width: 960px)').matches) {
+        $('layout').classList.remove('show-left');
+        $('layout').classList.add('show-right');
+      } else prefs.showRight = true;
+      prefs.focus = false;
+      setTab('right', 'frameworks');
+      applyLayout();
+      const box = $('planBox');
+      if (box) {
+        box.open = true;
+        const first = box.querySelector('textarea');
+        if (first) first.focus();
+      }
+    } else if (kind === 'outline') insertOutline(doc().framework);
+    else if (kind === 'warmup') startGame(pick(WP.warmups.list.filter((x) => x.minutes <= 3)).id);
+    else $('editor').focus();
+    renderStarter();
+  }
+
   function renderAll() {
+    renderStarter();
     renderGenreTabs();
     renderSheetMeta();
     renderTabs();
@@ -2327,6 +2392,17 @@
       if (sum) sum.textContent = `${n} of ${qs.length} answered`;
     });
     $('previewBtn').addEventListener('click', openPreview);
+    $('starter').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-start]');
+      if (b) runStarter(b.dataset.start);
+      else $('editor').focus();
+    });
+    $('pane-checks').addEventListener('toggle', (e) => {
+      if (e.target.dataset && e.target.dataset.fold === 'passing') {
+        prefs.showPassing = e.target.open;
+        savePrefs();
+      }
+    }, true);
 
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');

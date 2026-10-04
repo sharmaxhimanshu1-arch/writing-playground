@@ -1227,6 +1227,136 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .preview .small { font-family: var(--font-ui); }
 .preview-cue { font-family: var(--font-ui); font-size: var(--text-sm); color: var(--info); }
 
+/* ---------- Page toolbar ---------- */
+
+.sheet { container-type: inline-size; }
+.sheet-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.tool-group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.tool-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background-color: var(--raised);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 5px 26px 5px 11px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 13px) 52%, calc(100% - 9px) 52%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  max-width: 100%;
+}
+.tool-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 5px 11px;
+  color: var(--ink);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-select:hover, .tool-pill:hover { border-color: var(--accent); color: var(--accent); }
+.tool-pill-label { color: var(--faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.625rem; margin-right: 2px; }
+.tool-icons { gap: 2px; }
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  background: none;
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.tool-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.tool-btn:hover { color: var(--ink); background: var(--panel); }
+.tool-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+@container (max-width: 540px) {
+  .tool-label, .tool-pill-label { display: none; }
+  .tool-pill { max-width: 170px; }
+  .tool-select { max-width: 150px; }
+  .tool-btn { padding: 6px; }
+}
+
+/* ---------- Blank-page starter ---------- */
+
+.starter {
+  position: absolute;
+  z-index: 3;
+  top: 2.6em;
+  left: 0;
+  right: 0;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+.starter-title { margin: 0; font-family: var(--font-editor); font-size: 1.375rem; font-weight: 600; }
+.starter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.starter-grid button {
+  border: 1px solid var(--line);
+  background: var(--raised);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.starter-grid button:hover { border-color: var(--accent); }
+.starter-grid b { font-size: var(--text-md); }
+.starter-grid span { font-size: var(--text-sm); color: var(--muted); }
+.starter-skip { align-self: flex-start; border: 0; background: none; padding: 0; color: var(--accent); font-weight: 700; font-size: var(--text-sm); }
+.starter-skip:hover { text-decoration: underline; }
+@container (max-width: 520px) { .starter-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Checks: folded sections ---------- */
+
+.fold summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  padding: 6px 0;
+}
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::after { content: "+"; margin-left: auto; color: var(--faint); font-family: var(--font-mono); }
+.fold[open] summary::after { content: "–"; }
+.fold[open] summary { margin-bottom: 8px; }
+.fold .badge { min-width: 0; }
+.waiting-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--text-sm); }
+.all-good { margin: 0; padding: 12px 14px; border-radius: var(--radius); background: var(--good-soft); color: var(--good); font-weight: 700; font-size: var(--text-sm); }
+.score-none { font-family: var(--font-ui); font-size: 1.125rem; font-weight: 700; color: var(--muted); letter-spacing: 0; }
+
+/* Following-the-rule marks stay quiet so the problems stand out. */
+.backdrop .m-good { background: none; text-decoration: underline solid var(--good); text-decoration-thickness: 1.5px; }
+
+.sheet-foot { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
 </style>
 <div class="app" id="app">
   <header class="topbar">
@@ -1272,20 +1402,37 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
       <div class="sheet" id="sheet">
         <div class="sheet-head">
           <input id="docTitle" class="doc-title" type="text" placeholder="Untitled draft" aria-label="Draft title" autocomplete="off">
-          <div class="sheet-meta">
-            <select class="chip chip-select" id="genreChip" aria-label="Check this draft as"></select>
-            <button class="chip chip-btn" id="frameworkChip" type="button"></button>
-            <button class="chip chip-btn" id="widthBtn" type="button" aria-pressed="false">Wide page</button>
-            <button class="chip chip-btn" id="listenBtn" type="button" aria-pressed="false" hidden>Listen</button>
-            <button class="chip chip-btn" id="displayBtn" type="button" title="Text size, spacing and font">Display</button>
-            <button class="chip chip-btn" id="previewBtn" type="button" title="Read the draft cleanly, without notes or highlights">Preview</button>
+          <div class="sheet-tools" role="toolbar" aria-label="Page tools">
+            <div class="tool-group">
+              <select class="tool-select" id="genreChip" aria-label="Check this draft as" title="Which genre's rules check this draft"></select>
+              <button class="tool-pill" id="frameworkChip" type="button"></button>
+            </div>
+            <div class="tool-group tool-icons">
+              <button class="tool-btn" id="listenBtn" type="button" aria-pressed="false" title="Read aloud (Ctrl/⌘+Shift+L)" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 4V6L7 10H4z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg>
+                <span class="tool-label">Listen</span>
+              </button>
+              <button class="tool-btn" id="previewBtn" type="button" title="Read the draft cleanly, without notes or highlights">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span class="tool-label">Preview</span>
+              </button>
+              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing and font">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 8 6l5 12M4.8 14h6.4"/><path d="M15 18v-5.5a2.5 2.5 0 0 1 5 0V18M15 15h5"/></svg>
+                <span class="tool-label">Display</span>
+              </button>
+              <button class="tool-btn" id="widthBtn" type="button" aria-pressed="false" title="Wider page">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
+                <span class="tool-label">Wide</span>
+              </button>
+            </div>
           </div>
         </div>
         <div class="editor-wrap" id="editorWrap">
+          <div class="starter" id="starter" hidden></div>
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-          <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start anywhere. Stuck? Take a prompt from the Ideas panel, or insert a framework outline from the Toolkit."></textarea>
+          <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start writing here…"></textarea>
         </div>
-        <p class="sheet-foot">Click a highlight for a one-click fix where there is one. Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
+        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <span><code>## Heading</code> section</span> <span><code>&gt; note</code> private note</span> <span><code>[CUE]</code> stage direction</span> <span>blank line = new bit or stanza</span></p>
       </div>
     </main>
 
@@ -6834,6 +6981,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       hideFixCard();
       scheduleAnalysis();
       renderStatusLight();
+      if (!$('starter').hidden || !text.trim()) renderStarter();
     },
     onCaret(pos) {
       const here = editor.marksAt(pos);
@@ -6953,7 +7101,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     }
     const max = Math.max(50, ...days.map((x) => x.words));
     const W = 280;
-    const H = 56;
+    const H = 40;
     const gap = 3;
     const bw = (W - gap * 13) / 14;
     const fmt = (d) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -6969,6 +7117,10 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const today = prefs.days[dayKey()] || 0;
     const st = streak();
     const total = days.reduce((a, x) => a + x.words, 0);
+    if (!total) {
+      el.innerHTML = `<p class="small muted">Nothing written yet in the last 14 days. Your daily words and streak will show up here.</p>`;
+      return;
+    }
     el.innerHTML = `
       <div class="progress-stats">
         <span><b>${today}</b> words today</span>
@@ -8251,13 +8403,12 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const g = genre();
     $('tabScore').textContent = state.score == null ? '' : state.score;
 
-    const groups = [];
-    for (const r of results) {
-      let grp = groups.find((x) => x.name === r.group);
-      if (!grp) groups.push((grp = { name: r.group, items: [] }));
-      grp.items.push(r);
-    }
-    groups.forEach((grp) => grp.items.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]));
+    // Issues first; what's already fine, tips and not-yet-active checks fold away below.
+    const needs = results.filter((r) => r.status === 'fail' || r.status === 'warn').sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+    const tips = results.filter((r) => r.status === 'info');
+    const passing = results.filter((r) => r.status === 'pass');
+    const waiting = results.filter((r) => r.status === 'na');
+    const openIf = (list) => list.some((r) => state.expanded.has(r.id) || state.spotlight === r.id);
 
     const empty = !state.ctx || state.ctx.wordCount === 0;
     const spot = state.spotlight && results.find((r) => r.id === state.spotlight);
@@ -8265,8 +8416,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     pane.innerHTML = `
       <section class="section">
         <div class="score-head">
-          <div class="score-num" aria-label="Draft score">${state.score == null ? '–' : state.score}<small>/100</small></div>
-          <div>
+          <div class="score-num" aria-label="Draft score">${state.score == null ? '<span class="score-none">No score yet</span>' : `${state.score}<small>/100</small>`}</div>
+          <div ${state.score == null ? 'hidden' : ''}>
             <div class="meter" aria-hidden="true">
               ${scored ? `<span class="m-pass" style="width:${(counts.pass / scored) * 100}%"></span><span class="m-warn" style="width:${(counts.warn / scored) * 100}%"></span><span class="m-fail" style="width:${(counts.fail / scored) * 100}%"></span>` : ''}
             </div>
@@ -8284,11 +8435,26 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         ${prefs.oneThing ? (spot ? `<div class="spotlight-bar"><span>Fix this first: ${esc(spot.title)} <span class="small">(${issuesInOrder(results).findIndex((r) => r.id === spot.id) + 1} of ${issuesInOrder(results).length})</span></span><button class="btn btn-quiet" type="button" data-act="next-thing">Next issue</button></div>` : '<div class="spotlight-bar"><span>Nothing to fix right now. Nice work.</span></div>')
           : spot ? `<div class="spotlight-bar"><span>Showing only: ${esc(spot.title)}</span><button class="btn btn-quiet" type="button" data-act="clear-spot">Show all</button></div>` : ''}
       </section>
-      ${groups.map((grp) => `
-        <section class="section check-group">
-          <p class="eyebrow">${esc(grp.name)}</p>
-          ${grp.items.map(renderCheck).join('')}
-        </section>`).join('')}
+      ${needs.length ? `<section class="section check-group">
+          <p class="eyebrow">Needs work · ${needs.length}</p>
+          ${needs.map(renderCheck).join('')}
+        </section>` : empty ? '' : `<section class="section"><p class="all-good">Nothing to fix. Every active rule is being followed.</p></section>`}
+      ${tips.length ? `<section class="section check-group">
+          <p class="eyebrow">Tips · ${tips.length}</p>
+          ${tips.map(renderCheck).join('')}
+        </section>` : ''}
+      ${passing.length ? `<section class="section check-group">
+          <details class="fold" ${openIf(passing) || prefs.showPassing ? 'open' : ''} data-fold="passing">
+            <summary><span class="badge badge-pass">Following</span> ${passing.length} ${passing.length === 1 ? 'rule' : 'rules'} you’re already following</summary>
+            <div class="check-group">${passing.map(renderCheck).join('')}</div>
+          </details>
+        </section>` : ''}
+      ${waiting.length ? `<section class="section">
+          <details class="fold" data-fold="waiting">
+            <summary><span class="badge badge-na">Waiting</span> ${waiting.length} more ${waiting.length === 1 ? 'check starts' : 'checks start'} as you write</summary>
+            <ul class="waiting-list">${waiting.map((r) => `<li><b>${esc(r.title)}</b> <span class="small muted">${esc(r.summary)}</span></li>`).join('')}</ul>
+          </details>
+        </section>` : ''}
       ${renderMuted()}`;
     pane.scrollTop = scroll;
   }
@@ -8496,8 +8662,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   function renderSheetMeta() {
     const g = genre();
     const fw = frameworkDef();
-    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>Checked as ${esc(x.name)}</option>`).join('');
-    $('frameworkChip').textContent = fw ? `Framework: ${fw.name}` : 'Choose a framework';
+    $('genreChip').innerHTML = WP.genres.map((x) => `<option value="${x.id}" ${x.id === g.id ? 'selected' : ''}>${esc(x.name)} rules</option>`).join('');
+    $('frameworkChip').innerHTML = fw ? `<span class="tool-pill-label">Framework</span> ${esc(fw.name)}` : 'Choose a framework';
     $('frameworkChip').title = 'Open the Frameworks tab';
   }
 
@@ -8646,7 +8812,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   function setSpeaking(on) {
     state.speaking = on;
     const b = $('listenBtn');
-    b.textContent = on ? 'Stop listening' : 'Listen';
+    b.querySelector('.tool-label').textContent = on ? 'Stop' : 'Listen';
+    b.title = on ? 'Stop reading aloud' : 'Read aloud (Ctrl/⌘+Shift+L)';
     b.setAttribute('aria-pressed', String(on));
   }
 
@@ -8741,7 +8908,52 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   /* ---------- render all ---------- */
 
+  /* ---------- blank-page starter ---------- */
+
+  function renderStarter() {
+    const d = doc();
+    const box = $('starter');
+    const show = !d.text.trim() && !d.game;
+    box.hidden = !show;
+    if (!show) return;
+    const fw = frameworkDef();
+    box.innerHTML = `
+      <p class="starter-title">How do you want to start?</p>
+      <div class="starter-grid">
+        <button type="button" data-start="prompt"><b>Give me a prompt</b><span>A ready-made idea to write about</span></button>
+        <button type="button" data-start="plan"><b>Plan it first</b><span>${planFor(genre()).length} quick questions about your piece</span></button>
+        <button type="button" data-start="outline"><b>Use an outline</b><span>${fw ? esc(fw.name) + ': fill in each beat' : 'A proven structure to fill in'}</span></button>
+        <button type="button" data-start="warmup"><b>Warm up first</b><span>A 3-minute writing game</span></button>
+      </div>
+      <button type="button" class="starter-skip" data-start="type">Or just start typing</button>`;
+  }
+
+  function runStarter(kind) {
+    if (kind === 'prompt') {
+      if (!state.prompt) state.prompt = pick(genre().prompts);
+      useStarter('Prompt: ' + state.prompt);
+    } else if (kind === 'plan') {
+      if (window.matchMedia('(max-width: 960px)').matches) {
+        $('layout').classList.remove('show-left');
+        $('layout').classList.add('show-right');
+      } else prefs.showRight = true;
+      prefs.focus = false;
+      setTab('right', 'frameworks');
+      applyLayout();
+      const box = $('planBox');
+      if (box) {
+        box.open = true;
+        const first = box.querySelector('textarea');
+        if (first) first.focus();
+      }
+    } else if (kind === 'outline') insertOutline(doc().framework);
+    else if (kind === 'warmup') startGame(pick(WP.warmups.list.filter((x) => x.minutes <= 3)).id);
+    else $('editor').focus();
+    renderStarter();
+  }
+
   function renderAll() {
+    renderStarter();
     renderGenreTabs();
     renderSheetMeta();
     renderTabs();
@@ -8964,6 +9176,17 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       if (sum) sum.textContent = `${n} of ${qs.length} answered`;
     });
     $('previewBtn').addEventListener('click', openPreview);
+    $('starter').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-start]');
+      if (b) runStarter(b.dataset.start);
+      else $('editor').focus();
+    });
+    $('pane-checks').addEventListener('toggle', (e) => {
+      if (e.target.dataset && e.target.dataset.fold === 'passing') {
+        prefs.showPassing = e.target.open;
+        savePrefs();
+      }
+    }, true);
 
     $('pane-practice').addEventListener('click', (e) => {
       const b = e.target.closest('button');

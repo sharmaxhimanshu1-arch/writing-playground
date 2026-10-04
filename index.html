@@ -56,20 +56,37 @@
       <div class="sheet" id="sheet">
         <div class="sheet-head">
           <input id="docTitle" class="doc-title" type="text" placeholder="Untitled draft" aria-label="Draft title" autocomplete="off">
-          <div class="sheet-meta">
-            <select class="chip chip-select" id="genreChip" aria-label="Check this draft as"></select>
-            <button class="chip chip-btn" id="frameworkChip" type="button"></button>
-            <button class="chip chip-btn" id="widthBtn" type="button" aria-pressed="false">Wide page</button>
-            <button class="chip chip-btn" id="listenBtn" type="button" aria-pressed="false" hidden>Listen</button>
-            <button class="chip chip-btn" id="displayBtn" type="button" title="Text size, spacing and font">Display</button>
-            <button class="chip chip-btn" id="previewBtn" type="button" title="Read the draft cleanly, without notes or highlights">Preview</button>
+          <div class="sheet-tools" role="toolbar" aria-label="Page tools">
+            <div class="tool-group">
+              <select class="tool-select" id="genreChip" aria-label="Check this draft as" title="Which genre's rules check this draft"></select>
+              <button class="tool-pill" id="frameworkChip" type="button"></button>
+            </div>
+            <div class="tool-group tool-icons">
+              <button class="tool-btn" id="listenBtn" type="button" aria-pressed="false" title="Read aloud (Ctrl/⌘+Shift+L)" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 4V6L7 10H4z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10"/></svg>
+                <span class="tool-label">Listen</span>
+              </button>
+              <button class="tool-btn" id="previewBtn" type="button" title="Read the draft cleanly, without notes or highlights">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span class="tool-label">Preview</span>
+              </button>
+              <button class="tool-btn" id="displayBtn" type="button" title="Text size, spacing and font">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 8 6l5 12M4.8 14h6.4"/><path d="M15 18v-5.5a2.5 2.5 0 0 1 5 0V18M15 15h5"/></svg>
+                <span class="tool-label">Display</span>
+              </button>
+              <button class="tool-btn" id="widthBtn" type="button" aria-pressed="false" title="Wider page">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M3 12h18"/></svg>
+                <span class="tool-label">Wide</span>
+              </button>
+            </div>
           </div>
         </div>
         <div class="editor-wrap" id="editorWrap">
+          <div class="starter" id="starter" hidden></div>
           <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-          <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start anywhere. Stuck? Take a prompt from the Ideas panel, or insert a framework outline from the Toolkit."></textarea>
+          <textarea id="editor" spellcheck="true" aria-label="Your draft" placeholder="Start writing here…"></textarea>
         </div>
-        <p class="sheet-foot">Click a highlight for a one-click fix where there is one. Tip: <code>## Heading</code> starts a section · <code>&gt; note</code> is a private note the checker ignores · <code>[B-ROLL]</code> is a cue · a blank line separates bits and stanzas.</p>
+        <p class="sheet-foot"><span>Click a highlight to see why and fix it.</span> <span><code>## Heading</code> section</span> <span><code>&gt; note</code> private note</span> <span><code>[CUE]</code> stage direction</span> <span>blank line = new bit or stanza</span></p>
       </div>
     </main>
 
