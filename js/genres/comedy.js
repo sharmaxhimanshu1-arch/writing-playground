@@ -267,6 +267,8 @@
       }),
     }),
 
+    C.strongWords(),
+
     C.filler({ ok: 1.5, warn: 3 }),
     C.cliches(),
   ];

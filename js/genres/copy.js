@@ -154,6 +154,7 @@
 
     C.longSentences({ max: 18, why: 'Copy is skimmed. Sentences over 18 words lose readers. One idea per sentence; fragments are fine.' }),
     C.readability({ min: 3, max: 7, audience: 'customers who are skimming' }),
+    C.strongWords(),
     C.filler(),
     C.passive(),
   ];

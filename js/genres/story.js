@@ -137,6 +137,7 @@
     C.rhythm(),
     C.paragraphLength({ max: 150 }),
     C.cliches(),
+    C.strongWords(),
     C.filler(),
   ];
 

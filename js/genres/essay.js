@@ -128,6 +128,7 @@
     C.paragraphLength({ max: 100 }),
     C.passive(),
     C.weakOpeners(),
+    C.strongWords(),
     C.filler(),
     C.cliches(),
     C.repetition(),

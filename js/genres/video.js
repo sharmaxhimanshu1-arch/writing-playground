@@ -204,6 +204,7 @@
     },
 
     C.readability({ min: 4, max: 8, audience: 'viewers who are listening, not reading' }),
+    C.strongWords(),
     C.filler({ ok: 1.5, warn: 3 }),
     C.passive(),
     C.repetition(),
