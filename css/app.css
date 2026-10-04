@@ -1172,3 +1172,17 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .rhythm-chart .limit { stroke: var(--faint); stroke-dasharray: 3 3; }
 .rhythm-chart .bar-hit { fill: transparent; cursor: pointer; }
 .rhythm-chart g:hover rect, .rhythm-chart .bar-hit:hover { fill: rgba(127, 127, 127, 0.12); }
+
+/* ---------- Drafts: search and storage ---------- */
+
+.search {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+}
+.storage { display: flex; flex-direction: column; gap: 6px; }
+.storage-track { width: 100%; }
+.goal-fill.warn { background: var(--warn); }
