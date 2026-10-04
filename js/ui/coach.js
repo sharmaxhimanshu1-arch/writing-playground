@@ -17,6 +17,7 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
     comedy: ['Make it funnier', 'Tighten the setup', 'Sharpen the punchline', 'Add a tag line'],
     video: ['Stronger hook', 'Make it sound spoken', 'Add an open loop', 'Shorter'],
     story: ['Show, don’t tell', 'Add sensory detail', 'Raise the stakes', 'Sharper dialogue'],
+    novel: ['Sharper chapter ending', 'Cut the backstory', 'Show, don’t tell', 'Raise the stakes'],
     essay: ['Make it clearer', 'Add an example', 'Stronger opening', 'Shorter'],
     poetry: ['More concrete images', 'Fit the form', 'Fresher comparison', 'Stronger last line'],
     copy: ['Focus on benefits', 'Punchier', 'Talk to “you”', 'Stronger call to action'],
@@ -46,6 +47,13 @@ Base everything on the writer's actual text. When you quote the draft, copy the 
       'Where did you tell a feeling you could show instead?',
       'Is there at least one detail for a sense other than sight?',
       'Is the character different at the end from the start?',
+    ],
+    novel: [
+      'Does the first page raise a question the reader wants answered?',
+      'Whose point of view is each scene in, and does it stay there?',
+      'Does each chapter end on a pull rather than winding down?',
+      'Where is backstory slowing the present scene? Could one line replace a paragraph?',
+      'Does every chapter make things harder for the hero?',
     ],
     essay: [
       'Can you say your main point in one sentence, and is it near the top?',

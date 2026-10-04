@@ -4,7 +4,7 @@
   const lex = WP.lex;
   const { C, mark, plural, quote, band, per100 } = WP.checks;
 
-  const WEAK_OPENING = /^(?:it was a (?:dark|cold|beautiful|sunny|rainy|stormy|bright|normal|typical|quiet)\b|the (?:sun|rain|wind|sky|morning|alarm|weather)\b|(?:i|she|he|they|we) (?:woke|wake|opened (?:my|her|his|their) eyes)\b|once upon a time|my name is|dear diary|it all started|it all began|this is the story)/i;
+  const WEAK_OPENING = /^(?:it was a (?:dark|cold|beautiful|sunny|rainy|stormy|bright|normal|typical|quiet)\b|the (?:sun|rain|wind|sky|morning|alarm|weather)\b|(?:i|she|he|they|we|[a-z]+) (?:woke|wakes|wake|opened (?:my|her|his|their) eyes)\b|once upon a time|my name is|dear diary|it all started|it all began|this is the story)/i;
 
   const STAKES = ['want', 'wanted', 'wants', 'need', 'needed', 'needs', 'must', 'have to', 'had to', "can't", 'cannot',
     "couldn't", "won't", 'or else', 'before it', 'too late', 'lose', 'lost', 'risk', 'deadline', 'afraid', 'only chance',
