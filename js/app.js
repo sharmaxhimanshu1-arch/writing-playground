@@ -190,6 +190,12 @@
       A.applyDisplay();
     });
     $('modalBody').addEventListener('click', (e) => {
+      const an = e.target.closest('[data-anno]');
+      if (an) return A.focusNote(Number(an.dataset.anno));
+      const rt = e.target.closest('[data-read-try]');
+      if (rt) return A.tryReading(rt.dataset.readTry);
+      const ro = e.target.closest('[data-read-open]');
+      if (ro) return A.openReadingDraft(ro.dataset.readOpen);
       const hd = e.target.closest('[data-habit-drill]');
       if (hd) {
         const [gid, did] = hd.dataset.habitDrill.split(':');
@@ -249,6 +255,12 @@
     });
     // Keep Tab inside the dialog while it is open.
     $('modal').addEventListener('keydown', (e) => {
+      const an = e.target.closest && e.target.closest('mark.anno');
+      if (an && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        A.focusNote(Number(an.dataset.anno));
+        return;
+      }
       if (e.key !== 'Tab') return;
       const f = [...$('modal').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((x) => !x.disabled && x.offsetParent !== null);
       if (!f.length) return;
@@ -286,6 +298,8 @@
       }
     });
     $('pane-learn').addEventListener('click', (e) => {
+      const rd = e.target.closest('[data-read]');
+      if (rd) return A.openReading(rd.dataset.read);
       if (e.target.closest('[data-act="shortcuts"]')) return A.openShortcuts();
       if (e.target.closest('[data-act="tour"]')) {
         A.closeDrawers();
