@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const files = [
   'js/core/text.js', 'js/core/lexicon.js', 'js/core/checks.js',
   'js/genres/comedy.js', 'js/genres/video.js', 'js/genres/story.js', 'js/genres/novel.js',
-  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js', 'js/genres/warmups.js', 'js/genres/plans.js',
+  'js/genres/essay.js', 'js/genres/poetry.js', 'js/genres/copy.js', 'js/genres/speech.js', 'js/genres/screenplay.js', 'js/genres/drills.js', 'js/genres/warmups.js', 'js/genres/plans.js', 'js/genres/readings.js',
 ];
 const sandbox = { console };
 sandbox.window = sandbox;
@@ -115,6 +115,27 @@ for (const game of WP.warmups.list) {
     const okSome = some.status === target.status && some.ignored >= 1 && /marked as intentional/.test(some.summary);
     console.log(`intentional (one of several, any case): ${okSome ? 'ok' : 'WRONG'}`);
     if (!okSome) { failures++; origError('Ignoring one spot should drop only it and keep the status.'); }
+  }
+}
+
+// Read like a writer: model pieces should be strong examples, and every note should point at real text.
+for (const g of WP.genres) {
+  const list = (WP.readings || {})[g.id] || [];
+  if (!list.length) { failures++; origError('No readings for', g.id); }
+  for (const r of list) {
+    const problems = [];
+    if (!g.frameworks.some((f) => f.id === r.framework)) problems.push(`unknown framework ${r.framework}`);
+    const spots = r.notes.map((n) => ({ q: n.quote, at: r.text.indexOf(n.quote) }));
+    for (const s of spots) if (s.at < 0) problems.push(`quote not found: "${s.q}"`);
+    const placed = spots.filter((s) => s.at >= 0).sort((a, b) => a.at - b.at);
+    for (let i = 1; i < placed.length; i++) if (placed[i].at < placed[i - 1].at + placed[i - 1].q.length) problems.push(`quotes overlap: "${placed[i].q}"`);
+    if (r.notes.length < 3) problems.push('fewer than 3 notes');
+    if (!r.tryIt) problems.push('no try-it brief');
+    const out = analyse(g, r.text, r.framework);
+    for (const x of out.results) if (x.status === 'fail') problems.push(`breaks ${x.title}`);
+    if (out.score < 80) problems.push(`score ${out.score} is below 80`);
+    console.log(`reading ${g.id}/${r.id}: score ${out.score}${problems.length ? '   <-- ' + problems.join('; ') : ''}`);
+    if (problems.length) { failures++; origError('Reading needs work:', r.id); }
   }
 }
 

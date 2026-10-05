@@ -25,7 +25,7 @@ The screen opens calm: just the page you write on, a genre menu at the top, and 
 | **Checks** (right) | Your draft score, then the rules that **need work** first; tips, rules you already follow and checks that haven't started yet fold away below, with the sentence rhythm chart at the end. Each rule shows its status (Following / Improve / Breaking / Tip) and why it exists. Click a check to show only its highlights, click an item to jump to it, or fix every occurrence at once. **Sentence rhythm** charts every sentence's length so you can see a flat, droning stretch at a glance; click a bar to find the sentence. Feeling overwhelmed? Tick **One thing at a time** to see only the most important problem, then the next. Flagged something on purpose? **It’s intentional** (on the fix card, or **Intentional** next to any flagged item) stops flagging those exact words for that rule in this draft only; once every flagged spot of a rule is dismissed, the rule counts as followed. Kept highlights are listed at the bottom of Checks with **Check it again**. Drills and warm-ups don't offer it, since there the rule is the point. Any check you find unhelpful can be turned off per genre. |
 | **Coach** (right) | An AI writing coach powered by Claude: **Review my draft** (strengths, the fixes that matter most, and a rewrite you can drop in for each), **Rewrite a passage** (select text, pick a goal like "Sharpen the punchline", get three versions), **Brainstorm** (five ideas with first lines), and **Ask the coach** questions about your draft. You can also click any highlight and choose **Ask the coach** to have it explained. It runs when the playground is opened as a Claude artifact and uses the viewer's own Claude account. Anywhere else, the tab becomes **Be your own editor**: five revision questions for the genre, one per read-through, ticked off and saved with the draft, plus the three rules the checks say to fix first. |
 | **Frameworks** (right) | **Plan this piece**: four or five questions for the genre to answer before you write (a story's character, want, obstacle, stakes and change; a video's viewer, promise, points and call to action, and so on). Your answers are saved with the draft and shared with the coach. Below that, proven structures for the genre, each with step-by-step beats, a worked example, **Write it step by step** (guided writing), **Study the example** (each beat's job next to the example text), and an **Insert outline** button. Once inserted, the checker tracks which beats you have written; click a written beat to jump to it. **Your draft's outline** lists the first sentence of every paragraph, so you can check the structure in ten seconds. |
-| **Learn** (right) | Core principles, common beginner mistakes, and a glossary for the genre. |
+| **Learn** (right) | **Read like a writer**: two short model pieces per genre (a stand-up bit, a tutorial script, a first chapter, a wedding toast, a cold open…), each with numbered notes on what its best lines do. Click a note to light up its passage, or a passage to find its note. Each piece shows how it scores on the genre's checks. **Try your own** starts a fresh draft in the same framework with a matching brief; **Open in the editor** opens the piece as a draft so you can see every live highlight on good writing. Below that, core principles, common beginner mistakes, and a glossary for the genre. |
 
 ### Reading the highlights
 
@@ -78,6 +78,7 @@ js/genres/*.js        one file per genre: checks, frameworks, lessons, prompts, 
 js/genres/drills.js   practice drills for every genre
 js/genres/warmups.js  timed warm-up games with live constraint checks
 js/genres/plans.js    "Plan this piece" questions for each genre
+js/genres/readings.js annotated model pieces for Read like a writer
 js/ui/editor.js       highlighting editor (transparent textarea over a rendered backdrop)
 js/ui/coach.js        AI coach (uses the Claude artifact runtime when available)
 js/app/core.js        shared state on WP.app: storage, preferences, drafts, the editor, helpers
@@ -89,6 +90,7 @@ js/app/practice.js    learning path, drills, warm-ups
 js/app/drafts.js      drafts list, versions, import, export, backup and restore
 js/app/frameworks.js  plan this piece, outline, frameworks and study view
 js/app/guide.js       guided writing: one framework beat at a time
+js/app/reading.js     Read like a writer: the reader view and drafts from a model
 js/app/learn.js       Learn panel, writing habits, What improved?
 js/app/tools.js       Preview and print, Display, shortcuts, Listen
 js/app.js             events, the coach bridge, and boot
@@ -103,7 +105,7 @@ tests/e2e/            browser tests (Playwright) and their runner
 npm install                      # once: installs Playwright for the browser tests
 npx playwright install chromium  # once: the browser it drives
 npm run lint                     # ESLint: undefined names and leftovers across the script files
-npm test                         # rule checks: samples, framework examples, drills and warm-ups
+npm test                         # rule checks: samples, framework examples, drills, warm-ups and model pieces
 npm run build                    # rebuild dist/ after changing anything
 npm run e2e                      # browser tests: click through the real page in Chromium
 npm run e2e -- starter           # only the browser tests whose file name contains "starter"
@@ -117,6 +119,6 @@ Every pull request runs the lint and `npm test`, checks that `dist/` was rebuilt
 
 ### Adding a genre
 
-Create `js/genres/<name>.js` that calls `WP.genres.push({...})` with `id`, `name`, `tagline`, `checks`, `frameworks`, `prompts`, `generator`, `nudges`, `guide` and `sample` (copy an existing genre file as a template). Then add a `<script>` tag for it in `index.html`, inside the `SCRIPTS` markers and before `js/app/core.js`, and add the file to the list in `tests/run-checks.js`.
+Create `js/genres/<name>.js` that calls `WP.genres.push({...})` with `id`, `name`, `tagline`, `checks`, `frameworks`, `prompts`, `generator`, `nudges`, `guide` and `sample` (copy an existing genre file as a template). Then add a `<script>` tag for it in `index.html`, inside the `SCRIPTS` markers and before `js/app/core.js`, and add the file to the list in `tests/run-checks.js`. Give the genre at least two model pieces in `js/genres/readings.js`: `npm test` checks that each one names a real framework, that every note's quote appears in the text without overlapping another, and that the piece breaks no rule and scores 80 or more.
 
 A check is an object with `id`, `title`, `group`, `why` and a `run(ctx)` function that returns `{ status, summary, marks }`. A mark can carry `fixes: [{ label, text }]`; an empty `text` deletes the marked words and the app tidies the spacing and capitals around them. The helpers in `js/core/checks.js` (`C.phrases`, `C.filler`, `C.longSentences`…) cover most cases.

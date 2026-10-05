@@ -98,6 +98,7 @@
         <p class="lead">${esc(gd.intro)}</p>
         <div class="btn-row"><button class="btn" type="button" data-act="tour">Take the tour of this page</button></div>
       </section>
+      ${A.renderReadings(g)}
       <section class="section">
         <p class="eyebrow">Core principles</p>
         <div>${gd.principles.map((p, i) => `<details class="lesson" ${i === 0 ? 'open' : ''}><summary>${esc(p.title)}</summary><p>${esc(p.body)}</p></details>`).join('')}</div>
