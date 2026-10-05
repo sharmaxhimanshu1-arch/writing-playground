@@ -198,7 +198,9 @@
     if (!w) return /\d/.test(word) ? String(word).replace(/\D/g, '').length : 0;
     if (SYLLABLE_OVERRIDES[w]) return SYLLABLE_OVERRIDES[w];
     if (w.length <= 3) return 1;
-    w = w.replace(/(?:[^laeiouy]es|[^laeiouytd]ed|[^laeiouy]e)$/, '');
+    // A final "es" is silent (makes, hopes) except after s, x, z, ch, sh, ce and ge (loses, boxes, wishes, pages).
+    if (/(?:[sxz]|[cs]h|[cg])es$/.test(w)) w = w.replace(/es$/, 'is');
+    else w = w.replace(/(?:[^laeiouy]es|[^laeiouytd]ed|[^laeiouy]e)$/, '');
     w = w.replace(/^y/, '');
     const groups = w.match(/[aeiouy]{1,2}/g);
     let n = groups ? groups.length : 1;
