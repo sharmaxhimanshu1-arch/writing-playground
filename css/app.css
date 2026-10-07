@@ -927,6 +927,31 @@ code, kbd {
   gap: 8px;
 }
 .fix-card p { margin: 0; }
+/* Phones: a sheet along the bottom edge, thumb-sized buttons, swipe down to dismiss. */
+.fix-card.sheet-mode {
+  left: 0;
+  right: 0;
+  width: auto;
+  border-radius: 14px 14px 0 0;
+  border-bottom: 0;
+  padding: 18px 16px calc(14px + env(safe-area-inset-bottom));
+  font-size: var(--text-md);
+  max-height: 60vh;
+  overflow: auto;
+  box-shadow: 0 -6px 24px rgba(20, 30, 50, 0.16);
+}
+.fix-card.sheet-mode::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.fix-card.sheet-mode .btn { min-height: 44px; }
 
 .hit {
   border: 1px solid var(--line);
@@ -1224,6 +1249,13 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .study-beat { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .study-label { display: flex; gap: 8px; align-items: center; }
 .study-text { margin: 0; font-family: var(--font-editor); font-size: 1rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; }
+
+/* ---------- Sync ---------- */
+
+.sync-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); }
+.sync-box p { margin: 0; }
+.sync-box.on { border-color: var(--good); background: var(--good-soft); }
+.sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; vertical-align: 1px; }
 
 /* ---------- Read like a writer ---------- */
 

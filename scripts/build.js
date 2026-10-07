@@ -1,6 +1,7 @@
 // Bundles the app into single self-contained HTML files.
 //   dist/writing-playground.html  full page, open it anywhere (double-click works)
 //   dist/artifact.html            page body only, for hosts that supply their own <html>/<head>
+//   sw.js                         offline worker for the installable app (served from the repo root)
 // Usage: node scripts/build.js
 const fs = require('fs');
 const path = require('path');
@@ -56,5 +57,11 @@ ${js(true)}
 </script>
 `;
 fs.writeFileSync(path.join(root, 'dist/artifact.html'), artifact);
+
+// The offline worker for the installable app: every file the page loads, under a name that changes with their contents.
+const shell = ['index.html', 'css/app.css', ...scripts, 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png'];
+const version = require('crypto').createHash('sha256').update(shell.map((f) => f + '\n' + fs.readFileSync(path.join(root, f)).toString('base64')).join('\n')).digest('hex').slice(0, 12);
+const sw = read('scripts/sw.template.js').replace('__VERSION__', version).replace('__FILES__', JSON.stringify(['./', ...shell], null, 2));
+fs.writeFileSync(path.join(root, 'sw.js'), sw);
 
 console.log(`Built dist/writing-playground.html (${(full.length / 1024).toFixed(0)} KB) and dist/artifact.html`);
