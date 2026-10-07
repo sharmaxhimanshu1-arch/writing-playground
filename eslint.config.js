@@ -20,4 +20,10 @@ module.exports = [
   },
   // Browser tests send some functions into the page, where WP and the DOM exist.
   { files: ['tests/e2e/**/*.js'], languageOptions: { globals: { ...browser, WP: 'readonly' } } },
+  // The offline worker runs in its own scope; the template's __FILES__ is filled in by the build.
+  {
+    files: ['sw.js', 'scripts/sw.template.js'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: { self: 'readonly', caches: 'readonly', fetch: 'readonly', Response: 'readonly', URL: 'readonly', Promise: 'readonly', __FILES__: 'readonly' } },
+    rules,
+  },
 ];

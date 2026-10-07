@@ -173,6 +173,23 @@
       if (!e.target.closest('#fixCard') && e.target.id !== 'editor') A.hideFixCard();
     });
     $('desk').addEventListener('scroll', A.placeFixCard, { passive: true });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => A.placeFixCard());
+    // On phones the fix card is a bottom sheet: swipe it down to dismiss.
+    let swipe = null;
+    $('fixCard').addEventListener('touchstart', (e) => {
+      if ($('fixCard').classList.contains('sheet-mode') && e.touches.length === 1) swipe = { y: e.touches[0].clientY, dy: 0 };
+    }, { passive: true });
+    $('fixCard').addEventListener('touchmove', (e) => {
+      if (!swipe) return;
+      swipe.dy = Math.max(0, e.touches[0].clientY - swipe.y);
+      $('fixCard').style.transform = swipe.dy ? `translateY(${swipe.dy}px)` : '';
+    }, { passive: true });
+    $('fixCard').addEventListener('touchend', () => {
+      if (!swipe) return;
+      $('fixCard').style.transform = '';
+      if (swipe.dy > 60) A.hideFixCard();
+      swipe = null;
+    });
 
     $('displayBtn').addEventListener('click', A.openDisplay);
     $('modalBody').addEventListener('change', (e) => {
@@ -475,6 +492,11 @@
       } else if (t.dataset.act === 'copy') A.copyText();
       else if (t.dataset.act === 'download') A.downloadText(t.dataset.ext || 'txt');
       else if (t.dataset.act === 'backup') A.downloadBackup();
+      else if (t.dataset.act === 'sync-on') {
+        A.startSync();
+        toast('Sync is on. Your drafts will follow you to any device where you open this page.');
+      } else if (t.dataset.act === 'sync-off') A.stopSync();
+      else if (t.dataset.act === 'install') A.installApp();
       else if (t.dataset.act === 'improved') A.openImproved();
       else if (t.dataset.act === 'duplicate') A.duplicateDoc();
       else if (t.dataset.act === 'save-version') {
@@ -657,7 +679,13 @@
         state.downloads = d;
         if (prefs.leftTab === 'drafts') A.renderDrafts();
       }, () => {});
+      // Sync needs the private per-person store and to know who is signed in.
+      Promise.all([window.claude.use('db'), window.claude.use('user')]).then(async ([db, user]) => {
+        const id = db && user ? await user.id() : null;
+        if (id) A.syncAvailable(db, id);
+      }, () => {});
     }
+    A.setupInstall();
     const first = state.docs.find((d) => d.id === prefs.lastDoc) || state.docs[0];
     A.openDoc(first.id);
     A.applyLayout();

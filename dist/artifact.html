@@ -930,6 +930,31 @@ code, kbd {
   gap: 8px;
 }
 .fix-card p { margin: 0; }
+/* Phones: a sheet along the bottom edge, thumb-sized buttons, swipe down to dismiss. */
+.fix-card.sheet-mode {
+  left: 0;
+  right: 0;
+  width: auto;
+  border-radius: 14px 14px 0 0;
+  border-bottom: 0;
+  padding: 18px 16px calc(14px + env(safe-area-inset-bottom));
+  font-size: var(--text-md);
+  max-height: 60vh;
+  overflow: auto;
+  box-shadow: 0 -6px 24px rgba(20, 30, 50, 0.16);
+}
+.fix-card.sheet-mode::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.fix-card.sheet-mode .btn { min-height: 44px; }
 
 .hit {
   border: 1px solid var(--line);
@@ -1227,6 +1252,13 @@ del { text-decoration: line-through; text-decoration-color: var(--bad); color: v
 .study-beat { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .study-label { display: flex; gap: 8px; align-items: center; }
 .study-text { margin: 0; font-family: var(--font-editor); font-size: 1rem; line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; }
+
+/* ---------- Sync ---------- */
+
+.sync-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--raised); }
+.sync-box p { margin: 0; }
+.sync-box.on { border-color: var(--good); background: var(--good-soft); }
+.sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); margin-right: 6px; vertical-align: 1px; }
 
 /* ---------- Read like a writer ---------- */
 
@@ -8278,6 +8310,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       if (ok) {
         state.storageWarned = false;
         $('saveState').textContent = 'Saved in this browser';
+        if (A.syncSoon) A.syncSoon();
       } else {
         $('saveState').textContent = 'Not saved: browser storage is full or blocked';
         if (!state.storageWarned) {
@@ -8295,6 +8328,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   function savePrefs() {
     save(STORE_PREFS, prefs);
+    if (A.syncSoon) A.syncSoon();
   }
 
   /* ---------- editor ---------- */
@@ -9233,7 +9267,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
-    placeFixCard();
+    placeFixCard(true);
     $('tooltip').hidden = true;
   }
 
@@ -9262,13 +9296,35 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     return m.note;
   }
 
-  function placeFixCard() {
+  /** Phones get the card as a sheet along the bottom of the screen instead of a popup by the words. */
+  const sheetMode = () => window.matchMedia('(max-width: 640px)').matches;
+
+  /** Keeps the sheet above the on-screen keyboard, and the marked words above the sheet. */
+  function placeSheet(card, r, reveal) {
+    const vv = window.visualViewport;
+    const covered = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    card.style.left = '';
+    card.style.top = '';
+    card.style.bottom = covered + 'px';
+    const desk = $('desk');
+    const h = card.offsetHeight;
+    desk.style.paddingBottom = h + 24 + 'px';
+    if (!reveal) return;
+    const sheetTop = window.innerHeight - covered - h;
+    if (r.bottom > sheetTop - 16) desk.scrollBy({ top: r.bottom - sheetTop + 48 });
+  }
+
+  function placeFixCard(reveal) {
     const m = state.fixMark;
     const card = $('fixCard');
     if (!m || card.hidden) return;
     const r = editor.rectAt(m.start);
     const box = $('desk').getBoundingClientRect();
     if (r.bottom < box.top || r.top > box.bottom) return hideFixCard();
+    card.classList.toggle('sheet-mode', sheetMode());
+    if (sheetMode()) return placeSheet(card, r, reveal === true);
+    card.style.bottom = '';
+    $('desk').style.paddingBottom = '';
     const w = card.offsetWidth;
     const h = card.offsetHeight;
     let x = r.left;
@@ -9283,6 +9339,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     state.fixMark = null;
     const card = $('fixCard');
     if (card) card.hidden = true;
+    const desk = $('desk');
+    if (desk) desk.style.paddingBottom = '';
   }
 
   Object.assign(A, {
@@ -9985,7 +10043,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
           ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
       </section>
-      ${renderStorage(canDownload)}`;
+      ${renderStorage(canDownload)}
+      ${A.renderInstall()}`;
   }
 
   function renderStorage(canDownload) {
@@ -9994,7 +10053,8 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const mb = (n) => (n / 1e6).toFixed(1);
     return `<section class="section">
         <p class="eyebrow">Keep your work safe</p>
-        <p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>
+        ${state.sync && state.sync.on ? '' : '<p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>'}
+        ${A.renderSync()}
         ${used == null || pct < 25 ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
         <div class="btn-row">
           ${canDownload ? '<button class="btn" type="button" data-act="backup">Download a backup</button>' : ''}
@@ -10004,11 +10064,25 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       </section>`;
   }
 
-  function backupData() {
-    const keep = ['days', 'drillsDone', 'challenges', 'pieces', 'warmups', 'learned', 'muted'];
+  const PROGRESS_KEYS = ['days', 'drillsDone', 'challenges', 'pieces', 'warmups', 'learned', 'muted'];
+
+  /** The parts of your settings that follow you: streak days, finished drills and challenges, and so on. */
+  function progressData() {
     const p = {};
-    keep.forEach((k) => (p[k] = prefs[k]));
-    return JSON.stringify({ app: 'writing-playground', format: 1, exported: new Date().toISOString(), docs: state.docs, progress: p }, null, 1);
+    PROGRESS_KEYS.forEach((k) => (p[k] = prefs[k]));
+    return p;
+  }
+
+  /** Adds progress from a backup or another device. Nothing is ever taken away. */
+  function mergeProgress(p) {
+    if (!p || typeof p !== 'object') return;
+    if (Array.isArray(p.drillsDone)) prefs.drillsDone = [...new Set(prefs.drillsDone.concat(p.drillsDone))];
+    for (const k of ['challenges', 'pieces', 'warmups', 'learned', 'muted']) if (p[k] && typeof p[k] === 'object') prefs[k] = Object.assign({}, p[k], prefs[k]);
+    if (p.days && typeof p.days === 'object') for (const [k, v] of Object.entries(p.days)) prefs.days[k] = Math.max(prefs.days[k] || 0, Number(v) || 0);
+  }
+
+  function backupData() {
+    return JSON.stringify({ app: 'writing-playground', format: 1, exported: new Date().toISOString(), docs: state.docs, progress: progressData() }, null, 1);
   }
 
   function downloadBackup() {
@@ -10041,10 +10115,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
           updated++;
         }
       }
-      const p = data.progress || {};
-      for (const k of ['drillsDone']) if (Array.isArray(p[k])) prefs[k] = [...new Set(prefs[k].concat(p[k]))];
-      for (const k of ['challenges', 'pieces', 'warmups', 'learned', 'muted']) if (p[k] && typeof p[k] === 'object') prefs[k] = Object.assign({}, p[k], prefs[k]);
-      if (p.days && typeof p.days === 'object') for (const [k, v] of Object.entries(p.days)) prefs.days[k] = Math.max(prefs.days[k] || 0, Number(v) || 0);
+      mergeProgress(data.progress);
       savePrefs();
       persist(true);
       A.renderAll();
@@ -10083,6 +10154,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
     const genreId = genre().id;
     state.docs = state.docs.filter((d) => d.id !== id);
     state.confirmDelete = null;
+    A.syncDeleted(id);
     if (!state.docs.length) newDoc(genreId);
     if (id === state.currentId || !doc()) openDoc(state.docs[0].id);
     else renderDrafts();
@@ -10137,7 +10209,7 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
 
   Object.assign(A, {
     importFile, VERSION_GAP, MAX_VERSIONS, pushVersion, autoVersion, renderHistory, compareVersion,
-    restoreVersion, renderDrafts, renderStorage, backupData, downloadBackup, restoreBackup,
+    restoreVersion, renderDrafts, renderStorage, progressData, mergeProgress, backupData, downloadBackup, restoreBackup,
     duplicateDoc, openDoc, deleteDoc, copyText, saveFile, downloadText
   });
 })(window.WP = window.WP || {});
@@ -10661,6 +10733,431 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
   };
 })(window.WP = window.WP || {});
 
+// ---- js/app/sync.js
+/*
+ * Sync: keeps drafts and progress the same on every device, through the reader's own Claude account.
+ * Only on the copy hosted on claude.ai, where the page can keep data in a private space that belongs
+ * to whoever is signed in (nobody else can read it, the page's owner included). Off until the writer
+ * turns it on, once per device, from the Drafts tab.
+ *
+ * Each draft is one document; the newest change wins. A deleted draft leaves a small marker so other
+ * devices delete it too instead of sending it back.
+ */
+(function (WP) {
+  'use strict';
+
+  const A = WP.app;
+  const { $, doc, editor, esc, isUntouchedSample, load, persist, prefs, relTime, save, savePrefs, state, toast } = A;
+
+  const STORE_SYNC = 'wp.sync.v1';
+  const MAX_BYTES = 240000; // a stored document holds 256 KiB; keep room for the wrapper
+  const PAUSE = 2000; // wait this long after the last change before sending it
+  const MAX_WAIT = 15000; // but never longer than this while someone keeps typing
+
+  const S = {
+    db: null,
+    uid: null,
+    on: false,
+    ready: false, // the first look at what is stored has been merged in
+    busy: false,
+    again: false,
+    timer: null,
+    firstAsk: 0,
+    status: 'off', // off | connecting | synced | syncing | paused | error
+    message: '',
+    unsubs: [],
+    meta: Object.assign({ docs: {}, tomb: {}, sent: {}, progress: null, at: 0 }, load(STORE_SYNC, {})),
+  };
+  state.sync = S;
+
+  /* A short fingerprint, so unchanged drafts are never sent twice. */
+  function hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(36) + ':' + str.length;
+  }
+
+  /** The draft as it is stored: oldest automatic versions dropped if it would not fit. */
+  function bodyOf(d) {
+    const copy = JSON.parse(JSON.stringify(d));
+    let json = JSON.stringify(copy);
+    while (json.length > MAX_BYTES && copy.versions && copy.versions.length) {
+      copy.versions.shift();
+      json = JSON.stringify(copy);
+    }
+    return json.length > MAX_BYTES ? null : copy;
+  }
+
+  const sigOf = (d) => hash(JSON.stringify(d));
+  const saveMeta = () => save(STORE_SYNC, S.meta);
+  const syncable = (d) => !isUntouchedSample(d);
+
+  function drafts() {
+    return S.db.doc(`data/users/${S.uid}/library`).collection('drafts');
+  }
+
+  function progressRef() {
+    return S.db.doc(`data/users/${S.uid}/progress`);
+  }
+
+  function setStatus(status, message) {
+    S.status = status;
+    S.message = message || '';
+    const el = $('saveState');
+    if (el && S.on) {
+      el.textContent = status === 'synced' ? 'Saved and synced'
+        : status === 'syncing' || status === 'connecting' ? 'Saved in this browser · syncing…'
+          : 'Saved in this browser · sync paused';
+    }
+    if (prefs.leftTab === 'drafts' && $('pane-drafts')) {
+      const box = $('syncStatus');
+      if (box) box.textContent = statusText();
+    }
+  }
+
+  function statusText() {
+    if (S.status === 'synced') return `Up to date${S.meta.at ? ` · last synced ${relTime(S.meta.at)}` : ''}.`;
+    if (S.status === 'syncing' || S.status === 'connecting') return 'Syncing…';
+    if (S.status === 'paused' || S.status === 'error') return S.message || 'Sync is paused. Your drafts are still saved in this browser.';
+    return '';
+  }
+
+  /* ---------- receiving ---------- */
+
+  /** Brings one stored draft into this device, unless the copy here is newer. Returns true if anything changed. */
+  function applyRemote(id, body) {
+    if (!body || typeof body !== 'object') return false;
+    const ru = Number(body.updated) || 0;
+    const local = state.docs.find((d) => d.id === id);
+    const known = S.meta.docs[id];
+    const dirty = local && known && sigOf(local) !== known.h;
+    if (body.deleted) {
+      S.meta.tomb[id] = Math.max(S.meta.tomb[id] || 0, ru);
+      S.meta.sent[id] = true;
+      if (!local || (local.updated || 0) > ru) return false; // edited here after it was deleted there: keep it
+      state.docs = state.docs.filter((d) => d.id !== id);
+      delete S.meta.docs[id];
+      if (state.currentId === id) {
+        if (!state.docs.length) A.newDoc(A.genre().id);
+        A.openDoc(state.docs[0].id);
+        toast('This draft was deleted on another device.');
+      }
+      return true;
+    }
+    if (!body.doc || typeof body.doc.text !== 'string' || body.doc.id !== id) return false;
+    const rd = JSON.parse(JSON.stringify(body.doc)); // stored data arrives frozen; the app edits drafts in place
+    if (!WP.genres.some((g) => g.id === rd.genre)) rd.genre = WP.genres[0].id;
+    if ((S.meta.tomb[id] || 0) >= ru) return false; // deleted here after that change
+    const rsig = sigOf(rd);
+    if (local && sigOf(local) === rsig) {
+      S.meta.docs[id] = { h: rsig, u: local.updated || 0 };
+      return false;
+    }
+    if (local && (dirty || (local.updated || 0) >= ru)) return false; // this device's change is newer; it goes out next
+    if (!local) {
+      state.docs.push(rd);
+    } else {
+      Object.keys(local).forEach((k) => delete local[k]);
+      Object.assign(local, rd);
+      if (state.currentId === id) refreshOpenDoc(local);
+    }
+    S.meta.docs[id] = { h: rsig, u: ru };
+    return true;
+  }
+
+  /** The open draft changed on another device and has no unsent edits here: show the new text, keeping the caret near where it was. */
+  function refreshOpenDoc(d) {
+    const ta = $('editor');
+    const pos = Math.min(ta.selectionStart, d.text.length);
+    editor.value = d.text;
+    $('docTitle').value = d.title || '';
+    if (document.activeElement === ta) ta.setSelectionRange(pos, pos);
+    A.renderAll();
+    toast('Updated with changes from another device.');
+  }
+
+  function onDrafts(snap) {
+    let changed = false;
+    // Nothing is sent until the store has given a definitive answer, so a stale cache can't overwrite newer work.
+    const firstLook = !S.ready && !snap.metadata.fromCache;
+    const before = state.docs.length;
+    for (const c of snap.docChanges()) {
+      if (c.type === 'removed') continue;
+      if (applyRemote(c.doc.id, c.doc.data())) changed = true;
+    }
+    if (firstLook) {
+      S.ready = true;
+      // A brand-new device opens on its starter sample: show the latest synced draft instead.
+      const cur = doc();
+      if (state.docs.length > before && cur && isUntouchedSample(cur)) {
+        const latest = state.docs.filter((d) => !isUntouchedSample(d)).sort((a, b) => (b.updated || 0) - (a.updated || 0))[0];
+        if (latest) A.openDoc(latest.id);
+      }
+    }
+    saveMeta();
+    if (changed) {
+      persist(true);
+      if (prefs.leftTab === 'drafts') A.renderDrafts();
+    }
+    if (firstLook) {
+      if (state.docs.length > before) toast(`Synced: ${state.docs.length - before} ${state.docs.length - before === 1 ? 'draft' : 'drafts'} from your other devices.`);
+      flushSoon(true);
+    }
+  }
+
+  function onProgress(snap) {
+    if (!snap.exists) return;
+    const p = JSON.parse(JSON.stringify(snap.data().progress || {}));
+    const was = JSON.stringify(A.progressData());
+    A.mergeProgress(p);
+    if (JSON.stringify(A.progressData()) !== was) savePrefs();
+  }
+
+  function onError(e) {
+    const code = e && e.code;
+    if (code === 'unavailable') {
+      // The bridge stopped answering: listen again shortly.
+      setTimeout(() => S.on && listen(), 5000);
+      return;
+    }
+    stop(code === 'revoked' || code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed'
+      ? 'Sync isn’t available on this page right now. Your drafts are still saved in this browser.'
+      : 'Sync stopped because of an error. Your drafts are still saved in this browser.');
+  }
+
+  function listen() {
+    S.unsubs.forEach((u) => u());
+    S.unsubs = [drafts().onSnapshot(onDrafts, onError), progressRef().onSnapshot(onProgress, () => {})];
+  }
+
+  /* ---------- sending ---------- */
+
+  function flushSoon(now) {
+    if (!S.on) return;
+    clearTimeout(S.timer);
+    if (!S.firstAsk) S.firstAsk = Date.now();
+    const wait = now ? 0 : Math.max(0, Math.min(PAUSE, S.firstAsk + MAX_WAIT - Date.now()));
+    S.timer = setTimeout(flush, wait);
+  }
+
+  async function write(ref, body) {
+    try {
+      await ref.set(body);
+    } catch (e) {
+      if (e && e.code === 'unavailable') {
+        await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
+        await ref.set(body);
+      } else throw e;
+    }
+  }
+
+  async function flush() {
+    if (!S.on || !S.ready) return;
+    if (S.busy) {
+      S.again = true;
+      return;
+    }
+    S.busy = true;
+    S.firstAsk = 0;
+    let sent = 0;
+    try {
+      const col = drafts();
+      for (const d of state.docs.slice()) {
+        if (!syncable(d)) continue;
+        const known = S.meta.docs[d.id];
+        let sig = sigOf(d);
+        if (known && known.h === sig) continue;
+        // A change that didn't move the timestamp still has to win on the other devices.
+        if (known && (d.updated || 0) <= known.u) {
+          d.updated = Date.now();
+          sig = sigOf(d);
+        }
+        const body = bodyOf(d);
+        if (!body) {
+          if (!known || !known.big) toast(`“${d.title || 'Untitled draft'}” is too long to sync. It stays saved in this browser.`);
+          S.meta.docs[d.id] = { h: sig, u: d.updated || 0, big: true };
+          continue;
+        }
+        if (sent++ === 0) setStatus('syncing');
+        await write(col.doc(d.id), { updated: d.updated || Date.now(), doc: body });
+        S.meta.docs[d.id] = { h: sig, u: d.updated || 0 };
+      }
+      for (const [id, at] of Object.entries(S.meta.tomb)) {
+        if (S.meta.sent[id]) continue;
+        if (sent++ === 0) setStatus('syncing');
+        await write(col.doc(id), { updated: at, deleted: true });
+        S.meta.sent[id] = true;
+      }
+      const p = A.progressData();
+      const ph = hash(JSON.stringify(p));
+      if (ph !== S.meta.progress) {
+        await write(progressRef(), { progress: p });
+        S.meta.progress = ph;
+      }
+      S.meta.at = Date.now();
+      saveMeta();
+      setStatus('synced');
+    } catch (e) {
+      saveMeta();
+      const code = e && e.code;
+      if (code === 'quota_exceeded') setStatus('error', 'Your synced space is full. Delete drafts you no longer need, or download a backup.');
+      else if (code === 'resource_exhausted' || code === 'unavailable') {
+        setStatus('paused', 'Sync is catching its breath. It will try again in a moment.');
+        setTimeout(() => flushSoon(true), 20000);
+      } else if (code === 'invalid_argument') stop('This account can’t save synced drafts on this page. Your drafts are still saved in this browser.');
+      else onError(e);
+    } finally {
+      S.busy = false;
+      if (S.again) {
+        S.again = false;
+        flushSoon(true);
+      }
+    }
+  }
+
+  /* ---------- turning it on and off ---------- */
+
+  /** Called at start-up once the page knows whether it can sync here. */
+  function syncAvailable(db, uid) {
+    S.db = db;
+    S.uid = uid;
+    if (prefs.sync) start();
+    else if (prefs.leftTab === 'drafts') A.renderDrafts();
+  }
+
+  function start() {
+    if (!S.db || !S.uid) return;
+    S.on = true;
+    S.ready = false;
+    prefs.sync = true;
+    savePrefs();
+    setStatus('connecting');
+    listen();
+    if (prefs.leftTab === 'drafts') A.renderDrafts();
+  }
+
+  function stop(message) {
+    S.unsubs.forEach((u) => u());
+    S.unsubs = [];
+    clearTimeout(S.timer);
+    S.on = false;
+    S.ready = false;
+    if (message) {
+      setStatus('error', message);
+      toast(message);
+    } else {
+      prefs.sync = false;
+      savePrefs();
+      S.status = 'off';
+      toast('Sync is off on this device. Your drafts stay here and on your other devices.');
+    }
+    $('saveState').textContent = 'Saved in this browser';
+    if (prefs.leftTab === 'drafts') A.renderDrafts();
+  }
+
+  /** Records a deleted draft so other devices delete it too. */
+  function syncDeleted(id) {
+    if (!S.on && !S.meta.docs[id]) return;
+    S.meta.tomb[id] = Date.now();
+    delete S.meta.sent[id];
+    delete S.meta.docs[id];
+    saveMeta();
+    flushSoon();
+  }
+
+  /** The sync part of Drafts → Keep your work safe. */
+  function renderSync() {
+    if (!S.db || !S.uid) return '';
+    if (!S.on) {
+      return `<div class="sync-box">
+          <p class="small"><b>Use your drafts on every device.</b> Sync keeps them in your Claude account, private to you, so they’re there wherever you open this page signed in.</p>
+          ${S.status === 'error' && S.message ? `<p class="small muted">${esc(S.message)}</p>` : ''}
+          <div class="btn-row"><button class="btn btn-primary" type="button" data-act="sync-on">Sync my drafts</button></div>
+        </div>`;
+    }
+    return `<div class="sync-box on">
+        <p class="small"><b><span class="sync-dot" aria-hidden="true"></span>Synced with your Claude account.</b> Open this page on any device where you’re signed in and your drafts are there. Only you can see them.</p>
+        <p class="small muted" id="syncStatus" aria-live="polite">${esc(statusText())}</p>
+        <div class="btn-row"><button class="btn btn-quiet" type="button" data-act="sync-off">Stop syncing on this device</button></div>
+      </div>`;
+  }
+
+  Object.assign(A, { syncAvailable, startSync: start, stopSync: () => stop(), syncSoon: () => flushSoon(), syncDeleted, renderSync });
+})(window.WP = window.WP || {});
+
+// ---- js/app/install.js
+/*
+ * The installable app: on the copy served over https (GitHub Pages), a small worker keeps the files
+ * so the playground opens without a connection, and Drafts offers to install it like an app.
+ * The single-file builds and the claude.ai copy have no manifest, so none of this runs there.
+ */
+(function (WP) {
+  'use strict';
+
+  const A = WP.app;
+  const { prefs, state, toast } = A;
+
+  const hosted = () => !!document.querySelector('link[rel="manifest"]') && /^https?:$/.test(window.location.protocol) && !WP.ARTIFACT;
+  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  function setupInstall() {
+    if (!hosted()) return;
+    if ('serviceWorker' in navigator) {
+      const hadWorker = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').then(() => {
+        state.offlineReady = true;
+      }, () => {});
+      // A new version took over in the background: the next open uses it.
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadWorker) toast('Writing Playground was updated. Reload to get the newest version.');
+      });
+    }
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      state.installPrompt = e;
+      if (prefs.leftTab === 'drafts') A.renderDrafts();
+    });
+    window.addEventListener('appinstalled', () => {
+      state.installPrompt = null;
+      if (prefs.leftTab === 'drafts') A.renderDrafts();
+      toast('Installed. Open Writing Playground from your home screen or app list; it works offline too.');
+    });
+  }
+
+  function installApp() {
+    const p = state.installPrompt;
+    if (!p) return;
+    state.installPrompt = null;
+    p.prompt();
+    if (p.userChoice) p.userChoice.then(() => prefs.leftTab === 'drafts' && A.renderDrafts(), () => {});
+  }
+
+  /** The "Use it as an app" part of Drafts, when this browser can install it. */
+  function renderInstall() {
+    if (!hosted() || standalone()) return '';
+    if (state.installPrompt) {
+      return `<section class="section">
+          <p class="eyebrow">Use it as an app</p>
+          <p class="small muted">Install Writing Playground to open it from your home screen or dock, in its own window, even offline. Your drafts stay on this device.</p>
+          <div class="btn-row"><button class="btn" type="button" data-act="install">Install the app</button></div>
+        </section>`;
+    }
+    if (ios()) {
+      return `<section class="section">
+          <p class="eyebrow">Use it as an app</p>
+          <p class="small muted">In Safari, tap the Share button, then <b>Add to Home Screen</b>. It opens in its own window and works offline. Your drafts stay on this device.</p>
+        </section>`;
+    }
+    return '';
+  }
+
+  Object.assign(A, { setupInstall, installApp, renderInstall });
+})(window.WP = window.WP || {});
+
 // ---- js/app/learn.js
 /*
  * The Learn panel, writing habits and What improved?
@@ -11118,6 +11615,23 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       if (!e.target.closest('#fixCard') && e.target.id !== 'editor') A.hideFixCard();
     });
     $('desk').addEventListener('scroll', A.placeFixCard, { passive: true });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => A.placeFixCard());
+    // On phones the fix card is a bottom sheet: swipe it down to dismiss.
+    let swipe = null;
+    $('fixCard').addEventListener('touchstart', (e) => {
+      if ($('fixCard').classList.contains('sheet-mode') && e.touches.length === 1) swipe = { y: e.touches[0].clientY, dy: 0 };
+    }, { passive: true });
+    $('fixCard').addEventListener('touchmove', (e) => {
+      if (!swipe) return;
+      swipe.dy = Math.max(0, e.touches[0].clientY - swipe.y);
+      $('fixCard').style.transform = swipe.dy ? `translateY(${swipe.dy}px)` : '';
+    }, { passive: true });
+    $('fixCard').addEventListener('touchend', () => {
+      if (!swipe) return;
+      $('fixCard').style.transform = '';
+      if (swipe.dy > 60) A.hideFixCard();
+      swipe = null;
+    });
 
     $('displayBtn').addEventListener('click', A.openDisplay);
     $('modalBody').addEventListener('change', (e) => {
@@ -11420,6 +11934,11 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
       } else if (t.dataset.act === 'copy') A.copyText();
       else if (t.dataset.act === 'download') A.downloadText(t.dataset.ext || 'txt');
       else if (t.dataset.act === 'backup') A.downloadBackup();
+      else if (t.dataset.act === 'sync-on') {
+        A.startSync();
+        toast('Sync is on. Your drafts will follow you to any device where you open this page.');
+      } else if (t.dataset.act === 'sync-off') A.stopSync();
+      else if (t.dataset.act === 'install') A.installApp();
       else if (t.dataset.act === 'improved') A.openImproved();
       else if (t.dataset.act === 'duplicate') A.duplicateDoc();
       else if (t.dataset.act === 'save-version') {
@@ -11602,7 +12121,13 @@ ${context(3000)}`, { signal, modelTier: 'default', cache: false });
         state.downloads = d;
         if (prefs.leftTab === 'drafts') A.renderDrafts();
       }, () => {});
+      // Sync needs the private per-person store and to know who is signed in.
+      Promise.all([window.claude.use('db'), window.claude.use('user')]).then(async ([db, user]) => {
+        const id = db && user ? await user.id() : null;
+        if (id) A.syncAvailable(db, id);
+      }, () => {});
     }
+    A.setupInstall();
     const first = state.docs.find((d) => d.id === prefs.lastDoc) || state.docs[0];
     A.openDoc(first.id);
     A.applyLayout();

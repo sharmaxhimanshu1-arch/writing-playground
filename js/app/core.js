@@ -176,6 +176,7 @@
       if (ok) {
         state.storageWarned = false;
         $('saveState').textContent = 'Saved in this browser';
+        if (A.syncSoon) A.syncSoon();
       } else {
         $('saveState').textContent = 'Not saved: browser storage is full or blocked';
         if (!state.storageWarned) {
@@ -193,6 +194,7 @@
 
   function savePrefs() {
     save(STORE_PREFS, prefs);
+    if (A.syncSoon) A.syncSoon();
   }
 
   /* ---------- editor ---------- */

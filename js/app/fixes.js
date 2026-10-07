@@ -135,7 +135,7 @@
         <button class="btn btn-quiet" type="button" data-card-close>Dismiss</button>
       </div>`;
     card.hidden = false;
-    placeFixCard();
+    placeFixCard(true);
     $('tooltip').hidden = true;
   }
 
@@ -164,13 +164,35 @@
     return m.note;
   }
 
-  function placeFixCard() {
+  /** Phones get the card as a sheet along the bottom of the screen instead of a popup by the words. */
+  const sheetMode = () => window.matchMedia('(max-width: 640px)').matches;
+
+  /** Keeps the sheet above the on-screen keyboard, and the marked words above the sheet. */
+  function placeSheet(card, r, reveal) {
+    const vv = window.visualViewport;
+    const covered = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    card.style.left = '';
+    card.style.top = '';
+    card.style.bottom = covered + 'px';
+    const desk = $('desk');
+    const h = card.offsetHeight;
+    desk.style.paddingBottom = h + 24 + 'px';
+    if (!reveal) return;
+    const sheetTop = window.innerHeight - covered - h;
+    if (r.bottom > sheetTop - 16) desk.scrollBy({ top: r.bottom - sheetTop + 48 });
+  }
+
+  function placeFixCard(reveal) {
     const m = state.fixMark;
     const card = $('fixCard');
     if (!m || card.hidden) return;
     const r = editor.rectAt(m.start);
     const box = $('desk').getBoundingClientRect();
     if (r.bottom < box.top || r.top > box.bottom) return hideFixCard();
+    card.classList.toggle('sheet-mode', sheetMode());
+    if (sheetMode()) return placeSheet(card, r, reveal === true);
+    card.style.bottom = '';
+    $('desk').style.paddingBottom = '';
     const w = card.offsetWidth;
     const h = card.offsetHeight;
     let x = r.left;
@@ -185,6 +207,8 @@
     state.fixMark = null;
     const card = $('fixCard');
     if (card) card.hidden = true;
+    const desk = $('desk');
+    if (desk) desk.style.paddingBottom = '';
   }
 
   Object.assign(A, {

@@ -153,7 +153,8 @@
           ${canDownload ? '<button class="btn" type="button" data-act="download" data-ext="txt">Download .txt</button><button class="btn" type="button" data-act="download" data-ext="md">Download .md</button>' : ''}
         </div>
       </section>
-      ${renderStorage(canDownload)}`;
+      ${renderStorage(canDownload)}
+      ${A.renderInstall()}`;
   }
 
   function renderStorage(canDownload) {
@@ -162,7 +163,8 @@
     const mb = (n) => (n / 1e6).toFixed(1);
     return `<section class="section">
         <p class="eyebrow">Keep your work safe</p>
-        <p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>
+        ${state.sync && state.sync.on ? '' : '<p class="small muted">Drafts live only in this browser. Clearing browser data, a private window or a different device means they’re not there. Download a backup now and then.</p>'}
+        ${A.renderSync()}
         ${used == null || pct < 25 ? '' : `<div class="storage"><span class="goal-track storage-track"><span class="goal-fill ${pct > 70 ? 'warn' : ''}" style="width:${pct.toFixed(1)}%"></span></span><span class="small muted">${mb(used)} MB of about ${mb(STORAGE_TOTAL)} MB used</span></div>`}
         <div class="btn-row">
           ${canDownload ? '<button class="btn" type="button" data-act="backup">Download a backup</button>' : ''}
@@ -172,11 +174,25 @@
       </section>`;
   }
 
-  function backupData() {
-    const keep = ['days', 'drillsDone', 'challenges', 'pieces', 'warmups', 'learned', 'muted'];
+  const PROGRESS_KEYS = ['days', 'drillsDone', 'challenges', 'pieces', 'warmups', 'learned', 'muted'];
+
+  /** The parts of your settings that follow you: streak days, finished drills and challenges, and so on. */
+  function progressData() {
     const p = {};
-    keep.forEach((k) => (p[k] = prefs[k]));
-    return JSON.stringify({ app: 'writing-playground', format: 1, exported: new Date().toISOString(), docs: state.docs, progress: p }, null, 1);
+    PROGRESS_KEYS.forEach((k) => (p[k] = prefs[k]));
+    return p;
+  }
+
+  /** Adds progress from a backup or another device. Nothing is ever taken away. */
+  function mergeProgress(p) {
+    if (!p || typeof p !== 'object') return;
+    if (Array.isArray(p.drillsDone)) prefs.drillsDone = [...new Set(prefs.drillsDone.concat(p.drillsDone))];
+    for (const k of ['challenges', 'pieces', 'warmups', 'learned', 'muted']) if (p[k] && typeof p[k] === 'object') prefs[k] = Object.assign({}, p[k], prefs[k]);
+    if (p.days && typeof p.days === 'object') for (const [k, v] of Object.entries(p.days)) prefs.days[k] = Math.max(prefs.days[k] || 0, Number(v) || 0);
+  }
+
+  function backupData() {
+    return JSON.stringify({ app: 'writing-playground', format: 1, exported: new Date().toISOString(), docs: state.docs, progress: progressData() }, null, 1);
   }
 
   function downloadBackup() {
@@ -209,10 +225,7 @@
           updated++;
         }
       }
-      const p = data.progress || {};
-      for (const k of ['drillsDone']) if (Array.isArray(p[k])) prefs[k] = [...new Set(prefs[k].concat(p[k]))];
-      for (const k of ['challenges', 'pieces', 'warmups', 'learned', 'muted']) if (p[k] && typeof p[k] === 'object') prefs[k] = Object.assign({}, p[k], prefs[k]);
-      if (p.days && typeof p.days === 'object') for (const [k, v] of Object.entries(p.days)) prefs.days[k] = Math.max(prefs.days[k] || 0, Number(v) || 0);
+      mergeProgress(data.progress);
       savePrefs();
       persist(true);
       A.renderAll();
@@ -251,6 +264,7 @@
     const genreId = genre().id;
     state.docs = state.docs.filter((d) => d.id !== id);
     state.confirmDelete = null;
+    A.syncDeleted(id);
     if (!state.docs.length) newDoc(genreId);
     if (id === state.currentId || !doc()) openDoc(state.docs[0].id);
     else renderDrafts();
@@ -305,7 +319,7 @@
 
   Object.assign(A, {
     importFile, VERSION_GAP, MAX_VERSIONS, pushVersion, autoVersion, renderHistory, compareVersion,
-    restoreVersion, renderDrafts, renderStorage, backupData, downloadBackup, restoreBackup,
+    restoreVersion, renderDrafts, renderStorage, progressData, mergeProgress, backupData, downloadBackup, restoreBackup,
     duplicateDoc, openDoc, deleteDoc, copyText, saveFile, downloadText
   });
 })(window.WP = window.WP || {});
